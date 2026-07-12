@@ -199,19 +199,19 @@ export default function App() {
     // Fleet Manager: all access (1 to 8)
     if (role === 'Fleet Manager') return false;
 
-    // Dispatcher: Dashboard, Registry (Read-only), Trips, Settings
+    // Dispatcher: Dashboard, Registry (Read-only), Trips
     if (role === 'Dispatcher') {
-      return ![1, 2, 4, 8].includes(pageId);
+      return ![1, 2, 4].includes(pageId);
     }
 
-    // Safety Officer: Dashboard, Drivers, Trips (View), Settings
+    // Safety Officer: Dashboard, Drivers, Trips (View)
     if (role === 'Safety Officer') {
-      return ![1, 3, 4, 8].includes(pageId);
+      return ![1, 3, 4].includes(pageId);
     }
 
-    // Financial Analyst: Dashboard, Fleet (View), Expenses, Reports, Settings
+    // Financial Analyst: Dashboard, Fleet (View), Expenses, Reports
     if (role === 'Financial Analyst') {
-      return ![1, 2, 6, 7, 8].includes(pageId);
+      return ![1, 2, 6, 7].includes(pageId);
     }
 
     return true;
