@@ -70,8 +70,11 @@ export default function Sidebar({ activePage, setActivePage, currentUser, onLogo
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 space-y-1">
         {menuItems.map((item) => {
-          const Icon = item.icon;
           const restricted = isPageRestricted(item.id);
+          // Hide settings page completely if restricted
+          if (item.id === 8 && restricted) return null;
+
+          const Icon = item.icon;
           const active = activePage === item.id;
           
           return (
