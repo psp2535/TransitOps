@@ -1,12 +1,11 @@
 ﻿import React, { useState } from 'react';
-import { Truck, ShieldAlert, Key, Mail, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Truck, ShieldAlert, Key, Mail, ChevronRight } from 'lucide-react';
 import { INITIAL_USERS } from '../initialData';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Login({ onLogin, users }) {
-  const [email, setEmail] = useState('RavenK@transitops.in');
-  const [password, setPassword] = useState('password123');
-  const [role, setRole] = useState('Dispatcher');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -21,8 +20,7 @@ export default function Login({ onLogin, users }) {
     );
 
     if (user) {
-      const loggedUser = { ...user, role };
-      onLogin(loggedUser);
+      onLogin(user);
     } else {
       setError('Invalid credentials. Account locked after 5 failed attempts.');
     }
@@ -31,7 +29,6 @@ export default function Login({ onLogin, users }) {
   const fillCredentials = (user) => {
     setEmail(user.email);
     setPassword(user.password);
-    setRole(user.role);
     setError('');
   };
 
@@ -67,15 +64,15 @@ export default function Login({ onLogin, users }) {
               One unified platform to command your entire fleet operations.
             </h2>
             <div className="space-y-4 text-sm text-secondary">
-              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-electric"></div> Fleet Manager</div>
-              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-neon"></div> Dispatcher</div>
-              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-royal"></div> Safety Officer</div>
-              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-amber-500"></div> Financial Analyst</div>
+              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-electric"></div> Fleet Manager (All Access)</div>
+              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-neon"></div> Dispatcher (Trips & Routing)</div>
+              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-royal"></div> Safety Officer (Drivers & Compliance)</div>
+              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-amber-500"></div> Financial Analyst (Expenses & Reports)</div>
             </div>
           </motion.div>
 
           <div className="text-xs text-muted font-medium">
-            TransitOps &copy; 2026 • RBAC Enabled
+            TransitOps &copy; 2026 • strict RBAC Enabled
           </div>
         </div>
 
@@ -101,7 +98,7 @@ export default function Login({ onLogin, users }) {
                     className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric placeholder-muted/70 backdrop-blur-sm"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. RavenK@transitops.in"
+                    placeholder="e.g. manager@transitops.com"
                     required
                   />
                 </div>
@@ -123,27 +120,6 @@ export default function Login({ onLogin, users }) {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-secondary uppercase tracking-wider" htmlFor="role">Simulate Role (RBAC)</label>
-                <div className="relative group">
-                  <ShieldCheck size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-electric" />
-                  <select
-                    id="role"
-                    className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric appearance-none backdrop-blur-sm cursor-pointer"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                  >
-                    <option value="Fleet Manager">Fleet Manager</option>
-                    <option value="Dispatcher">Dispatcher</option>
-                    <option value="Safety Officer">Safety Officer</option>
-                    <option value="Financial Analyst">Financial Analyst</option>
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted">
-                    <ChevronRight size={16} className="rotate-90" />
-                  </div>
-                </div>
-              </div>
-
               <div className="flex items-center justify-between text-sm pt-2">
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <div className="relative flex items-center justify-center w-4 h-4 rounded border border-border group-hover:border-electric transition-colors">
@@ -162,7 +138,7 @@ export default function Login({ onLogin, users }) {
                 </a>
               </div>
 
-              <button type="submit" className="w-full btn-primary py-3.5 mt-4 text-sm tracking-wide">
+              <button type="submit" className="w-full btn-primary py-3.5 mt-4 text-sm tracking-wide shadow-sm">
                 Sign In to TransitOps
               </button>
             </form>
@@ -187,11 +163,11 @@ export default function Login({ onLogin, users }) {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6, duration: 1 }}
             className="w-full max-w-md mt-10"
           >
-            <p className="text-xs font-semibold text-secondary uppercase tracking-wider mb-4 text-center">Quick Demo Login (Click to Autofill)</p>
+            <p className="text-xs font-semibold text-secondary uppercase tracking-wider mb-4 text-center">Quick Demo Accounts (Click to Autofill)</p>
             <div className="grid grid-cols-2 gap-3">
               {userList.map((u) => (
                 <button
-                  key={u.role || u.email}
+                  key={u.email}
                   type="button"
                   className="flex flex-col items-start p-3 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/60 hover:border-border/80 transition-all text-left group"
                   onClick={() => fillCredentials(u)}
@@ -207,4 +183,3 @@ export default function Login({ onLogin, users }) {
     </div>
   );
 }
-

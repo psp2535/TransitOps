@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 export default function Dashboard({ vehicles, drivers, trips, currentUser }) {
@@ -170,14 +170,14 @@ export default function Dashboard({ vehicles, drivers, trips, currentUser }) {
                     return (
                       <tr key={trip.id} className="hover:bg-secondary/5 transition-colors">
                         <td className="py-4 pr-4 text-sm font-medium">{trip.id}</td>
-                        <td className="py-4 px-4 text-sm">{trip.vehicle || 'â€”'}</td>
-                        <td className="py-4 px-4 text-sm">{trip.driver || 'â€”'}</td>
+                        <td className="py-4 px-4 text-sm">{trip.vehicle || '-'}</td>
+                        <td className="py-4 px-4 text-sm">{trip.driver || '-'}</td>
                         <td className="py-4 px-4">
                           <span className={`px-4 py-1.5 rounded-md text-xs font-medium ${statusClass}`}>
                             {trip.status}
                           </span>
                         </td>
-                        <td className="py-4 pl-4 text-sm">{trip.eta || 'â€”'}</td>
+                        <td className="py-4 pl-4 text-sm">{trip.eta || '-'}</td>
                       </tr>
                     )
                   })}
