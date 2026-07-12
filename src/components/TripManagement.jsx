@@ -325,7 +325,7 @@ export default function TripManagement({ trips, setTrips, vehicles, setVehicles,
                     Dispatch Trip
                   </button>
                   <button type="button" onClick={() => { setSource(''); setDestination(''); setCargoWeight(''); setPlannedDistance(''); setSelectedVehicleReg(''); setSelectedDriverName(''); }} className="flex-1 py-2.5 bg-transparent border border-border text-muted hover:text-primary hover:border-border rounded-md text-sm font-semibold transition-colors">
-                    Reset
+                    Cancel
                   </button>
                 </div>
               </form>
@@ -413,7 +413,7 @@ export default function TripManagement({ trips, setTrips, vehicles, setVehicles,
             </div>
 
             <div className="mt-8 text-xs font-semibold text-muted text-center pt-8 border-t border-border/50">
-              On Complete: Resources are freed automatically.
+              On Complete: odometer &rarr; fuel log &rarr; expenses &rarr; Vehicle & Driver Available
             </div>
           </div>
 
