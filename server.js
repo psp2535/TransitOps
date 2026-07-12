@@ -16,7 +16,7 @@ import {
 } from './src/initialData.js';
 
 const app = express();
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(express.json());
@@ -29,7 +29,7 @@ app.use((req, res, next) => {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_PATH = path.join(__dirname, 'database.sqlite');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'database.sqlite');
 
 let db;
 
@@ -284,6 +284,13 @@ app.post('/api/reset', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Serve static frontend files in production
+app.use(express.static(path.join(__dirname, 'dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // Start server after database initialization
