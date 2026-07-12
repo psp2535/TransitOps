@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Truck, ShieldAlert, Key, Mail, ChevronRight } from 'lucide-react';
 import { INITIAL_USERS } from '../initialData';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,18 @@ export default function Login({ onLogin, users }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+
+  const [isForgotPassword, setIsForgotPassword] = useState(window.location.hash === '#forgot');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setIsForgotPassword(window.location.hash === '#forgot');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const userList = users && users.length > 0 ? users : INITIAL_USERS;
 
@@ -82,80 +94,147 @@ export default function Login({ onLogin, users }) {
             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
             className="w-full max-w-md glass-card p-10 relative z-10"
           >
-            <div className="mb-10 text-center lg:text-left">
-              <h2 className="text-3xl font-heading font-bold mb-2">Welcome back</h2>
-              <p className="text-secondary text-sm">Enter your credentials to access your dashboard</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-secondary uppercase tracking-wider" htmlFor="email">Email address</label>
-                <div className="relative group">
-                  <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-electric" />
-                  <input
-                    type="email"
-                    id="email"
-                    className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric placeholder-muted/70 backdrop-blur-sm"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. manager@transitops.com"
-                    required
-                  />
+            {isForgotPassword ? (
+              <div>
+                <div className="mb-10 text-center lg:text-left">
+                  <h2 className="text-3xl font-heading font-bold mb-2">Reset Password</h2>
+                  <p className="text-secondary text-sm">Enter your email to receive a password reset link</p>
                 </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-secondary uppercase tracking-wider" htmlFor="password">Password</label>
-                <div className="relative group">
-                  <Key size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-electric" />
-                  <input
-                    type="password"
-                    id="password"
-                    className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric placeholder-muted/70 backdrop-blur-sm"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-sm pt-2">
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <div className="relative flex items-center justify-center w-4 h-4 rounded border border-border group-hover:border-electric transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="absolute opacity-0 cursor-pointer h-0 w-0 peer"
-                    />
-                    <div className="w-2 h-2 rounded-sm bg-electric opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                {resetSent ? (
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-xl bg-electric/10 border border-electric/20 text-electric text-sm">
+                      <p className="font-semibold">Reset Link Sent!</p>
+                      <p className="mt-1 text-xs text-secondary">
+                        A recovery link has been sent to <strong>{resetEmail}</strong>. Please check your inbox.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        window.location.hash = '';
+                        setResetSent(false);
+                        setResetEmail('');
+                      }}
+                      className="w-full btn-primary py-3.5 text-sm tracking-wide shadow-sm"
+                    >
+                      Back to Sign In
+                    </button>
                   </div>
-                  <span className="text-secondary group-hover:text-primary transition-colors">Remember me</span>
-                </label>
-                <a href="#forgot" className="text-electric hover:text-cyan-glow hover:underline underline-offset-4 transition-colors font-medium">
-                  Forgot password?
-                </a>
+                ) : (
+                  <form onSubmit={(e) => { e.preventDefault(); setResetSent(true); }} className="space-y-6">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-secondary uppercase tracking-wider" htmlFor="reset-email">Email address</label>
+                      <div className="relative group">
+                        <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-electric" />
+                        <input
+                          type="email"
+                          id="reset-email"
+                          className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric placeholder-muted/70 backdrop-blur-sm"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          placeholder="e.g. manager@transitops.com"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <button type="submit" className="w-full btn-primary py-3.5 mt-4 text-sm tracking-wide shadow-sm">
+                      Send Reset Instructions
+                    </button>
+
+                    <div className="text-center pt-2">
+                      <a
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          window.location.hash = '';
+                        }}
+                        className="text-electric hover:text-cyan-glow hover:underline underline-offset-4 text-sm transition-colors font-medium"
+                      >
+                        Back to Login
+                      </a>
+                    </div>
+                  </form>
+                )}
               </div>
+            ) : (
+              <>
+                <div className="mb-10 text-center lg:text-left">
+                  <h2 className="text-3xl font-heading font-bold mb-2">Welcome back</h2>
+                  <p className="text-secondary text-sm">Enter your credentials to access your dashboard</p>
+                </div>
 
-              <button type="submit" className="w-full btn-primary py-3.5 mt-4 text-sm tracking-wide shadow-sm">
-                Sign In to TransitOps
-              </button>
-            </form>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-secondary uppercase tracking-wider" htmlFor="email">Email address</label>
+                    <div className="relative group">
+                      <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-electric" />
+                      <input
+                        type="email"
+                        id="email"
+                        className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric placeholder-muted/70 backdrop-blur-sm"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="e.g. manager@transitops.com"
+                        required
+                      />
+                    </div>
+                  </div>
 
-            <AnimatePresence>
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10, height: 0 }} 
-                  animate={{ opacity: 1, y: 0, height: 'auto' }} 
-                  exit={{ opacity: 0, y: -10, height: 0 }}
-                  className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 flex gap-3 text-sm items-start overflow-hidden"
-                >
-                  <ShieldAlert size={18} className="shrink-0 mt-0.5" />
-                  <p>{error}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-secondary uppercase tracking-wider" htmlFor="password">Password</label>
+                    <div className="relative group">
+                      <Key size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-electric" />
+                      <input
+                        type="password"
+                        id="password"
+                        className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric placeholder-muted/70 backdrop-blur-sm"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className="relative flex items-center justify-center w-4 h-4 rounded border border-border group-hover:border-electric transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="absolute opacity-0 cursor-pointer h-0 w-0 peer"
+                        />
+                        <div className="w-2 h-2 rounded-sm bg-electric opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                      </div>
+                      <span className="text-secondary group-hover:text-primary transition-colors">Remember me</span>
+                    </label>
+                    <a href="#forgot" className="text-electric hover:text-cyan-glow hover:underline underline-offset-4 transition-colors font-medium">
+                      Forgot password?
+                    </a>
+                  </div>
+
+                  <button type="submit" className="w-full btn-primary py-3.5 mt-4 text-sm tracking-wide shadow-sm">
+                    Sign In to TransitOps
+                  </button>
+                </form>
+
+                <AnimatePresence>
+                  {error && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10, height: 0 }} 
+                      animate={{ opacity: 1, y: 0, height: 'auto' }} 
+                      exit={{ opacity: 0, y: -10, height: 0 }}
+                      className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 flex gap-3 text-sm items-start overflow-hidden"
+                    >
+                      <ShieldAlert size={18} className="shrink-0 mt-0.5" />
+                      <p>{error}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
           </motion.div>
 
           {/* Quick Demo Login */}
