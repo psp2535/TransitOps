@@ -1,3 +1,4 @@
+// TransitOps - User Authentication Portal
 import React, { useState } from 'react';
 import { Truck, ShieldAlert, Key, Mail, ShieldCheck } from 'lucide-react';
 import { INITIAL_USERS } from '../initialData';
