@@ -14,6 +14,30 @@ export default function TripManagement({ trips, setTrips, vehicles, setVehicles,
   const [formError, setFormError] = useState('');
   const [capacityError, setCapacityError] = useState('');
 
+  const [selectedTripId, setSelectedTripId] = useState(() => {
+    return trips.length > 0 ? trips[trips.length - 1].id : '';
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+
+  React.useEffect(() => {
+    if (!selectedTripId && trips.length > 0) {
+      setSelectedTripId(trips[trips.length - 1].id);
+    }
+  }, [trips, selectedTripId]);
+
+  const filteredTrips = trips.filter(t => {
+    const query = searchQuery.toLowerCase();
+    return t.id.toLowerCase().includes(query) ||
+           (t.vehicle || '').toLowerCase().includes(query) ||
+           (t.driver || '').toLowerCase().includes(query) ||
+           t.source.toLowerCase().includes(query) ||
+           t.destination.toLowerCase().includes(query) ||
+           t.status.toLowerCase().includes(query);
+  });
+
+  const selectedTrip = trips.find(t => t.id === selectedTripId);
+  const currentStatus = selectedTrip ? selectedTrip.status : 'Draft';
+
   const isAuthorized = currentUser?.role === 'Dispatcher' || currentUser?.role === 'Fleet Manager';
 
   // Real-time capacity check
@@ -49,8 +73,24 @@ export default function TripManagement({ trips, setTrips, vehicles, setVehicles,
       return;
     }
 
+    // Dynamic ETA calculation based on average driving speed of 50 km/h
+    const speed = 50;
+    const hours = Number(plannedDistance) / speed;
+    let computedEta = 'TBD';
+    if (hours > 0) {
+      if (hours < 1) {
+        computedEta = `${Math.round(hours * 60)} min`;
+      } else {
+        const h = Math.floor(hours);
+        const m = Math.round((hours - h) * 60);
+        computedEta = m > 0 ? `${h}h ${m}m` : `${h}h`;
+      }
+    }
+
+    const newTripId = 'TR' + String(Math.floor(Math.random() * 900) + 100);
+
     const newTrip = {
-      id: 'TR' + String(Math.floor(Math.random() * 900) + 100),
+      id: newTripId,
       source,
       destination,
       vehicle: selectedVehicleReg,
@@ -59,14 +99,15 @@ export default function TripManagement({ trips, setTrips, vehicles, setVehicles,
       cargoWeightUnit,
       plannedDistance: Number(plannedDistance),
       status: 'Dispatched',
-      eta: 'TBD'
+      eta: computedEta
     };
 
     setTrips([...trips, newTrip]);
+    setSelectedTripId(newTripId);
 
     // Update vehicle and driver status
     setVehicles(vehicles.map(v => v.regNo === selectedVehicleReg ? { ...v, status: 'On Trip' } : v));
-    setDrivers(drivers.map(d => d.name === selectedDriverName ? { ...d, status: 'On Trip', safetyScore: 'On Trip' } : d));
+    setDrivers(drivers.map(d => d.name === selectedDriverName ? { ...d, status: 'On Trip' } : d));
 
     // Reset
     setSource('');
@@ -82,22 +123,43 @@ export default function TripManagement({ trips, setTrips, vehicles, setVehicles,
     setTrips(trips.map(t => t.id === tripId ? { ...t, status: 'Completed', eta: '-' } : t));
     // Release resources
     setVehicles(vehicles.map(v => v.regNo === vehicleReg ? { ...v, status: 'Available' } : v));
-    setDrivers(drivers.map(d => d.name === driverName ? { ...d, status: 'Available', safetyScore: 'Available' } : d));
+    setDrivers(drivers.map(d => d.name === driverName ? { ...d, status: 'Available' } : d));
   };
 
   const handleCancelTrip = (tripId, vehicleReg, driverName) => {
     if (!isAuthorized) return;
     setTrips(trips.map(t => t.id === tripId ? { ...t, status: 'Cancelled', eta: '-' } : t));
     if (vehicleReg) setVehicles(vehicles.map(v => v.regNo === vehicleReg ? { ...v, status: 'Available' } : v));
-    if (driverName) setDrivers(drivers.map(d => d.name === driverName ? { ...d, status: 'Available', safetyScore: 'Available' } : d));
+    if (driverName) setDrivers(drivers.map(d => d.name === driverName ? { ...d, status: 'Available' } : d));
   };
 
   const initials = currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'RK';
   const userName = currentUser?.name || 'Raven K.';
   const userRole = currentUser?.role || 'Dispatcher';
 
+  const isLicenseExpired = (expiryStr) => {
+    if (!expiryStr) return true;
+    if (expiryStr.toUpperCase().includes('EXPIRED')) return true;
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (expiryStr.includes('-')) {
+        return new Date(expiryStr) < today;
+      }
+      if (expiryStr.includes('/')) {
+        const [month, year] = expiryStr.split('/').map(Number);
+        const expiryDate = new Date(year, month, 0);
+        return expiryDate < today;
+      }
+      const fallback = new Date(expiryStr);
+      return isNaN(fallback.getTime()) ? false : fallback < today;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const availableVehicles = vehicles.filter(v => v.status === 'Available');
-  const availableDrivers = drivers.filter(d => d.status === 'Available');
+  const availableDrivers = drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.expiry));
 
   return (
     <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
@@ -107,7 +169,9 @@ export default function TripManagement({ trips, setTrips, vehicles, setVehicles,
         <div className="relative w-80">
           <input 
             type="text" 
-            placeholder="Search trips..." 
+            placeholder="Search trips by ID, route, status..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
             className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
           />
         </div>
@@ -131,24 +195,65 @@ export default function TripManagement({ trips, setTrips, vehicles, setVehicles,
             
             {/* Trip Lifecycle */}
             <div>
-              <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-4">Trip Lifecycle</h3>
-              <div className="flex items-center justify-between relative px-4">
-                <div className="absolute left-6 right-6 top-2 h-0.5 bg-border -z-10"></div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-green-500"></div>
+              <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-4">
+                Trip Lifecycle {selectedTrip ? `(${selectedTrip.id})` : ''}
+              </h3>
+              <div className="flex items-center justify-between relative px-4 py-2.5 bg-card/50 border border-border/40 rounded-xl">
+                {/* Node 1: Draft */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div className={`w-4 h-4 rounded-full transition-all duration-300 bg-green-500 ${currentStatus !== 'Cancelled' ? 'ring-2 ring-green-500/30' : ''}`}></div>
                   <span className="text-[10px] font-bold text-green-500">Draft</span>
                 </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-blue-500 border-2 border-primary ring-2 ring-blue-500"></div>
-                  <span className="text-[10px] font-bold text-blue-500">Dispatched</span>
+
+                {/* Line 1 */}
+                <div className={`h-0.5 flex-1 mx-2 transition-colors duration-300 ${
+                  (currentStatus === 'Dispatched' || currentStatus === 'Completed') ? 'bg-blue-500' : 'bg-border'
+                }`}></div>
+
+                {/* Node 2: Dispatched */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div className={`w-4 h-4 rounded-full transition-all duration-300 ${
+                    (currentStatus === 'Dispatched' || currentStatus === 'Completed') 
+                      ? 'bg-blue-500 border-2 border-primary ring-2 ring-blue-500' 
+                      : 'bg-border'
+                  }`}></div>
+                  <span className={`text-[10px] font-bold transition-colors duration-300 ${
+                    (currentStatus === 'Dispatched' || currentStatus === 'Completed') ? 'text-blue-500' : 'text-muted'
+                  }`}>Dispatched</span>
                 </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-border"></div>
-                  <span className="text-[10px] font-bold text-muted">Completed</span>
+
+                {/* Line 2 */}
+                <div className={`h-0.5 flex-1 mx-2 transition-colors duration-300 ${
+                  currentStatus === 'Completed' ? 'bg-green-500' : 'bg-border'
+                }`}></div>
+
+                {/* Node 3: Completed */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div className={`w-4 h-4 rounded-full transition-all duration-300 ${
+                    currentStatus === 'Completed' 
+                      ? 'bg-green-500 border-2 border-primary ring-2 ring-green-500' 
+                      : 'bg-border'
+                  }`}></div>
+                  <span className={`text-[10px] font-bold transition-colors duration-300 ${
+                    currentStatus === 'Completed' ? 'text-green-500' : 'text-muted'
+                  }`}>Completed</span>
                 </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-border"></div>
-                  <span className="text-[10px] font-bold text-muted">Cancelled</span>
+
+                {/* Line 3 */}
+                <div className={`h-0.5 flex-1 mx-2 transition-colors duration-300 ${
+                  currentStatus === 'Cancelled' ? 'bg-red-500' : 'bg-border'
+                }`}></div>
+
+                {/* Node 4: Cancelled */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div className={`w-4 h-4 rounded-full transition-all duration-300 ${
+                    currentStatus === 'Cancelled' 
+                      ? 'bg-red-500 border-2 border-primary ring-2 ring-red-500' 
+                      : 'bg-border'
+                  }`}></div>
+                  <span className={`text-[10px] font-bold transition-colors duration-300 ${
+                    currentStatus === 'Cancelled' ? 'text-red-500' : 'text-muted'
+                  }`}>Cancelled</span>
                 </div>
               </div>
             </div>
@@ -234,40 +339,72 @@ export default function TripManagement({ trips, setTrips, vehicles, setVehicles,
             <div className="space-y-4">
               {trips.length === 0 && <p className="text-sm text-muted">No trips recorded yet.</p>}
               
-              {trips.slice().reverse().map(trip => {
+              {filteredTrips.slice().reverse().map(trip => {
                 let statusClass = "bg-border text-primary";
                 if (trip.status === "Draft") statusClass = "bg-gray-400 text-white";
                 else if (trip.status === "Dispatched") statusClass = "bg-blue-500 text-white";
                 else if (trip.status === "Completed") statusClass = "bg-green-500 text-white";
                 else if (trip.status === "Cancelled") statusClass = "bg-red-500 text-white";
 
+                const isSelected = selectedTripId === trip.id;
+
                 return (
-                  <div key={trip.id} className="p-5 border border-border shadow-sm rounded-xl bg-card">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-xs font-medium text-muted uppercase tracking-widest">{trip.id}</span>
-                      <span className="text-xs font-bold text-primary uppercase tracking-widest">{trip.vehicle} {trip.driver ? "/ " + trip.driver : ""}</span>
+                  <div 
+                    key={trip.id} 
+                    onClick={() => setSelectedTripId(trip.id)}
+                    className={`p-5 border shadow-sm rounded-xl bg-card transition-all cursor-pointer space-y-3 ${
+                      isSelected 
+                        ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md' 
+                        : 'border-border hover:border-border-hover'
+                    }`}
+                  >
+                    {/* Top Row: ID & Vehicle/Driver */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold text-muted uppercase tracking-widest">{trip.id}</span>
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">
+                        {trip.vehicle || trip.driver ? (
+                          `${trip.vehicle || 'Unassigned'} ${trip.driver ? '/ ' + trip.driver : ''}`
+                        ) : 'Unassigned'}
+                      </span>
                     </div>
                     
-                    <div className="text-sm font-medium text-primary mb-4 flex items-center gap-2">
-                      {trip.source} <ArrowRight size={14} className="text-muted" /> {trip.destination}
+                    {/* Middle Row: Route & ETA */}
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm font-medium text-primary flex items-center gap-2">
+                        {trip.source} <ArrowRight size={14} className="text-muted" /> {trip.destination}
+                      </div>
+                      <span className="text-xs font-semibold text-muted">
+                        {trip.eta}
+                      </span>
                     </div>
 
-                    <div className="flex justify-between items-center">
+                    {/* Bottom Row: Status Badge & Control Buttons */}
+                    <div className="flex justify-between items-center pt-2 border-t border-border/20">
                       <span className={"px-4 py-1.5 rounded-md text-xs font-medium " + statusClass}>
                         {trip.status}
                       </span>
                       
                       {trip.status === 'Dispatched' && isAuthorized && (
                         <div className="flex gap-2">
-                          <button onClick={() => handleCompleteTrip(trip.id, trip.vehicle, trip.driver)} className="px-3 py-1 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white transition-colors rounded text-xs font-semibold">Complete</button>
-                          <button onClick={() => handleCancelTrip(trip.id, trip.vehicle, trip.driver)} className="px-3 py-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors rounded text-xs font-semibold">Cancel</button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCompleteTrip(trip.id, trip.vehicle, trip.driver);
+                            }} 
+                            className="px-3 py-1 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white transition-colors rounded text-xs font-semibold cursor-pointer"
+                          >
+                            Complete
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelTrip(trip.id, trip.vehicle, trip.driver);
+                            }} 
+                            className="px-3 py-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors rounded text-xs font-semibold cursor-pointer"
+                          >
+                            Cancel
+                          </button>
                         </div>
-                      )}
-                      
-                      {trip.status !== 'Dispatched' && (
-                        <span className="text-xs font-semibold text-muted">
-                          {trip.eta}
-                        </span>
                       )}
                     </div>
                   </div>

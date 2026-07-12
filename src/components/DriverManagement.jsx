@@ -15,7 +15,7 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
   const [expiry, setExpiry] = useState('');
   const [contact, setContact] = useState('');
   const [tripCompl, setTripCompl] = useState('100%');
-  const [safetyScore, setSafetyScore] = useState('Available');
+  const [safetyScore, setSafetyScore] = useState(100);
   const [status, setStatus] = useState('Available');
   const [validationError, setValidationError] = useState('');
 
@@ -29,14 +29,30 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
   // Backend handles seed data, no local override needed
 
   const checkLicenseExpired = (expiryDateStr) => {
-    if (expiryDateStr.includes('EXPIRED') || expiryDateStr === '03/2025') return true; // mock check
-    return false;
+    if (!expiryDateStr) return true;
+    if (expiryDateStr.toUpperCase().includes('EXPIRED')) return true;
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (expiryDateStr.includes('-')) {
+        return new Date(expiryDateStr) < today;
+      }
+      if (expiryDateStr.includes('/')) {
+        const [month, year] = expiryDateStr.split('/').map(Number);
+        const expiryDate = new Date(year, month, 0);
+        return expiryDate < today;
+      }
+      const fallback = new Date(expiryDateStr);
+      return isNaN(fallback.getTime()) ? false : fallback < today;
+    } catch (e) {
+      return false;
+    }
   };
 
   const openAddModal = () => {
     setModalMode('add'); setValidationError('');
     setName(''); setLicenseNo(''); setCategory('LMV'); setExpiry('');
-    setContact(''); setTripCompl('100%'); setSafetyScore('Available'); setStatus('Available');
+    setContact(''); setTripCompl('100%'); setSafetyScore(100); setStatus('Available');
     setIsModalOpen(true);
   };
 
@@ -63,9 +79,13 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
     if (modalMode === 'add') {
       if (drivers.some((d) => d.name.toLowerCase() === name.trim().toLowerCase())) return setValidationError("Driver already exists.");
       if (drivers.some((d) => d.licenseNo.toLowerCase() === licenseNo.trim().toLowerCase())) return setValidationError("License already registered.");
+    } else {
+      if (drivers.some((d) => d.licenseNo.toLowerCase() === licenseNo.trim().toLowerCase() && d.name !== editingDriverName)) {
+        return setValidationError("License already registered to another driver.");
+      }
     }
 
-    const driverData = { name: name.trim(), licenseNo: licenseNo.trim().toUpperCase(), category, expiry, contact: contact.trim(), tripCompl, safetyScore, status };
+    const driverData = { name: name.trim(), licenseNo: licenseNo.trim().toUpperCase(), category, expiry, contact: contact.trim(), tripCompl, safetyScore: isNaN(Number(safetyScore)) ? safetyScore : Number(safetyScore), status };
 
     if (modalMode === 'add') {
       setDrivers([...drivers, driverData]);
@@ -132,6 +152,7 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
                   <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Trip Compl.</th>
                   <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Safety</th>
                   <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Status</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/20">
@@ -139,9 +160,16 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
                   const expired = checkLicenseExpired(driver.expiry);
                   
                   let safetyClass = "bg-border text-primary";
-                  if (driver.safetyScore === "Available" || driver.safetyScore >= 90) safetyClass = "bg-green-500 text-white";
-                  else if (driver.safetyScore === "On Trip") safetyClass = "bg-blue-500 text-white";
-                  else if (driver.safetyScore === "Suspended" || driver.safetyScore < 75) safetyClass = "bg-orange-500 text-white";
+                  const score = Number(driver.safetyScore);
+                  if (isNaN(score)) {
+                    if (driver.safetyScore === "On Trip") safetyClass = "bg-blue-500 text-white";
+                    else if (driver.safetyScore === "Suspended") safetyClass = "bg-orange-500 text-white";
+                    else safetyClass = "bg-green-500 text-white";
+                  } else {
+                    if (score >= 90) safetyClass = "bg-green-500 text-white";
+                    else if (score >= 75) safetyClass = "bg-blue-500 text-white";
+                    else safetyClass = "bg-orange-500 text-white";
+                  }
 
                   let statusClass = "bg-border text-primary";
                   if (driver.status === "Available") statusClass = "bg-green-500 text-white";
@@ -170,6 +198,30 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
                         <span className={"px-4 py-1.5 rounded-md text-xs font-medium " + statusClass}>
                           {driver.status}
                         </span>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(driver);
+                            }}
+                            className="p-1.5 hover:bg-secondary/20 rounded-md text-secondary hover:text-primary transition-colors border border-border/50 cursor-pointer"
+                            title="Edit Driver"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(driver.name);
+                            }}
+                            className="p-1.5 hover:bg-red-500/20 rounded-md text-red-500 transition-colors border border-red-500/20 cursor-pointer"
+                            title="Delete Driver"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -219,7 +271,7 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
                     <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">License Category</label><select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={category} onChange={(e) => setCategory(e.target.value)}><option value="LMV">LMV</option><option value="HMV">HMV</option><option value="MCWG">MCWG</option></select></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Expiry Date</label><input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={expiry} onChange={(e) => setExpiry(e.target.value)} required placeholder="MM/YYYY" /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Contact Number</label><input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={contact} onChange={(e) => setContact(e.target.value)} required /></div>
-                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Safety Status</label><select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={safetyScore} onChange={(e) => setSafetyScore(e.target.value)}><option value="Available">Available</option><option value="On Trip">On Trip</option><option value="Suspended">Suspended</option></select></div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Safety Score (0-100)</label><input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={safetyScore} onChange={(e) => setSafetyScore(e.target.value)} min="0" max="100" required /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Completion Rate</label><input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={tripCompl} onChange={(e) => setTripCompl(e.target.value)} required /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Status</label><select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50 appearance-none cursor-pointer" value={status} onChange={(e) => setStatus(e.target.value)} disabled={modalMode === 'add'}><option value="Available">Available</option><option value="On Trip">On Trip</option><option value="Off Duty">Off Duty</option><option value="Suspended">Suspended</option></select></div>
                   </div>

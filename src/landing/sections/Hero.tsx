@@ -4,7 +4,11 @@ import MagneticButton from '../components/MagneticButton'
 
 const HeroScene = lazy(() => import('../three/HeroScene'))
 
-export default function Hero() {
+interface HeroProps {
+  onEnterApp: () => void
+}
+
+export default function Hero({ onEnterApp }: HeroProps) {
   const sectionRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -90,13 +94,13 @@ export default function Hero() {
         </p>
 
         <div className="hero-cta-anim hero-cta-group">
-          <MagneticButton variant="primary" className="hero-cta-btn">
+          <MagneticButton variant="primary" className="hero-cta-btn" onClick={onEnterApp}>
             <span>Start Free Trial</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
             </svg>
           </MagneticButton>
-          <MagneticButton variant="secondary" className="hero-cta-btn">
+          <MagneticButton variant="secondary" className="hero-cta-btn" onClick={onEnterApp}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="6 3 20 12 6 21 6 3" />
             </svg>

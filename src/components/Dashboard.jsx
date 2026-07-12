@@ -1,29 +1,69 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
-export default function Dashboard({ vehicles, drivers, trips, currentUser }) {
+export default function Dashboard({ vehicles = [], drivers = [], trips = [], currentUser }) {
   const [filterType, setFilterType] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterRegion, setFilterRegion] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [visibleTripsCount, setVisibleTripsCount] = useState(5);
 
-  const activeVehiclesCount = vehicles.filter(v => v.status === 'On Trip' || v.status === 'On Mission').length;
-  const availableVehiclesCount = vehicles.filter(v => v.status === 'Available').length;
-  const inMaintenanceCount = vehicles.filter(v => v.status === 'In Shop' || v.status === 'In Maintenance').length;
-  const retiredVehiclesCount = vehicles.filter(v => v.status === 'Retired').length;
+  // Filtered vehicles based on type, status, region, and text search
+  const filteredVehicles = vehicles.filter(v => {
+    const matchesType = filterType === 'All' || v.type.toLowerCase() === filterType.toLowerCase();
+    const matchesStatus = filterStatus === 'All' || v.status.toLowerCase() === filterStatus.toLowerCase();
+    const matchesRegion = filterRegion === 'All' || v.region.toLowerCase() === filterRegion.toLowerCase();
+    const matchesSearch = searchQuery === '' || 
+      v.regNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.region.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.type.toLowerCase().includes(searchQuery.toLowerCase());
+      
+    return matchesType && matchesStatus && matchesRegion && matchesSearch;
+  });
+
+  // Filtered trips based on selected filters and text search
+  const filteredTrips = trips.filter(t => {
+    const associatedVehicle = vehicles.find(v => v.name.toLowerCase() === t.vehicle?.toLowerCase() || v.regNo.toLowerCase() === t.vehicle?.toLowerCase());
+    const matchesType = filterType === 'All' || (associatedVehicle && associatedVehicle.type.toLowerCase() === filterType.toLowerCase());
+    const matchesStatus = filterStatus === 'All' || (associatedVehicle && associatedVehicle.status.toLowerCase() === filterStatus.toLowerCase());
+    const matchesRegion = filterRegion === 'All' || (associatedVehicle && associatedVehicle.region.toLowerCase() === filterRegion.toLowerCase());
+    const matchesSearch = searchQuery === '' ||
+      t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.vehicle && t.vehicle.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (t.driver && t.driver.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      t.source.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.status.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesType && matchesStatus && matchesRegion && matchesSearch;
+  });
+
+  // Computed Counts
+  const activeVehiclesCount = filteredVehicles.filter(v => v.status === 'On Trip' || v.status === 'On Mission').length;
+  const availableVehiclesCount = filteredVehicles.filter(v => v.status === 'Available').length;
+  const inMaintenanceCount = filteredVehicles.filter(v => v.status === 'In Shop' || v.status === 'In Maintenance').length;
+  const retiredVehiclesCount = filteredVehicles.filter(v => v.status === 'Retired').length;
   
-  const activeTripsCount = trips.filter(t => t.status === 'On Trip' || t.status === 'In Progress').length;
-  const pendingTripsCount = trips.filter(t => t.status === 'Draft' || t.status === 'Dispatched').length;
+  const activeTripsCount = filteredTrips.filter(t => t.status === 'On Trip' || t.status === 'In Progress').length;
+  const pendingTripsCount = filteredTrips.filter(t => t.status === 'Draft' || t.status === 'Dispatched').length;
   
-  const driversOnDuty = drivers.filter(d => d.status === 'Available' || d.status === 'Active' || d.status === 'On Trip').length;
+  const driversOnDuty = drivers.filter(d => {
+    const matchesSearch = searchQuery === '' || 
+      d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.licenseNo.toLowerCase().includes(searchQuery.toLowerCase());
+    return (d.status === 'Available' || d.status === 'Active' || d.status === 'On Trip') && matchesSearch;
+  }).length;
   
-  const totalOperable = vehicles.filter(v => v.status !== 'Retired').length;
+  const totalOperable = filteredVehicles.filter(v => v.status !== 'Retired').length;
   const fleetUtilization = totalOperable > 0 ? Math.round((activeVehiclesCount / totalOperable) * 100) : 0;
 
-  // Recent Trips (take first 5)
-  const recentTrips = trips.slice(0, 5);
+  // Recent Trips (take first N after filtering)
+  const recentTrips = filteredTrips.slice(0, visibleTripsCount);
 
   const getPercentage = (count) => {
-    const total = vehicles.length;
+    const total = filteredVehicles.length;
     if (total === 0) return 0;
     return Math.round((count / total) * 100);
   };
@@ -58,6 +98,8 @@ export default function Dashboard({ vehicles, drivers, trips, currentUser }) {
           <input 
             type="text" 
             placeholder="Search..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
           />
         </div>
@@ -81,14 +123,67 @@ export default function Dashboard({ vehicles, drivers, trips, currentUser }) {
         <motion.div variants={itemVariants} className="flex flex-col gap-2">
           <span className="text-xs font-bold text-muted uppercase tracking-wider">Filters</span>
           <div className="flex flex-wrap gap-4 items-center">
-            {['Vehicle Type', 'Status', 'Region'].map(filter => (
-              <div key={filter} className="relative shadow-sm rounded-md">
-                <select className="text-sm bg-card border border-border/80 rounded-md px-4 py-1.5 text-primary outline-none focus:border-border appearance-none pr-8 min-w-[140px] cursor-pointer">
-                  <option>{filter}: All</option>
-                </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-xs">â–¼</div>
-              </div>
-            ))}
+            
+            {/* Vehicle Type Filter */}
+            <div className="relative shadow-sm rounded-md">
+              <select 
+                value={filterType} 
+                onChange={(e) => setFilterType(e.target.value)}
+                className="text-sm bg-card border border-border/80 rounded-md px-4 py-1.5 text-primary outline-none focus:border-border appearance-none pr-8 min-w-[160px] cursor-pointer"
+              >
+                <option value="All">Vehicle Type: All</option>
+                {Array.from(new Set(vehicles.map(v => v.type))).filter(Boolean).map(type => (
+                  <option key={type} value={type}>Vehicle Type: {type}</option>
+                ))}
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-xs">▼</div>
+            </div>
+
+            {/* Status Filter */}
+            <div className="relative shadow-sm rounded-md">
+              <select 
+                value={filterStatus} 
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="text-sm bg-card border border-border/80 rounded-md px-4 py-1.5 text-primary outline-none focus:border-border appearance-none pr-8 min-w-[160px] cursor-pointer"
+              >
+                <option value="All">Status: All</option>
+                {Array.from(new Set(vehicles.map(v => v.status))).filter(Boolean).map(status => (
+                  <option key={status} value={status}>Status: {status}</option>
+                ))}
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-xs">▼</div>
+            </div>
+
+            {/* Region Filter */}
+            <div className="relative shadow-sm rounded-md">
+              <select 
+                value={filterRegion} 
+                onChange={(e) => setFilterRegion(e.target.value)}
+                className="text-sm bg-card border border-border/80 rounded-md px-4 py-1.5 text-primary outline-none focus:border-border appearance-none pr-8 min-w-[160px] cursor-pointer"
+              >
+                <option value="All">Region: All</option>
+                {Array.from(new Set(vehicles.map(v => v.region))).filter(Boolean).map(region => (
+                  <option key={region} value={region}>Region: {region}</option>
+                ))}
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-xs">▼</div>
+            </div>
+
+            {/* Clear Filters Button */}
+            {(filterType !== 'All' || filterStatus !== 'All' || filterRegion !== 'All' || searchQuery !== '') && (
+              <button
+                onClick={() => {
+                  setFilterType('All');
+                  setFilterStatus('All');
+                  setFilterRegion('All');
+                  setSearchQuery('');
+                }}
+                className="text-xs font-semibold text-orange-500 hover:text-orange-600 transition-colors ml-2"
+              >
+                Clear Filters
+              </button>
+            )}
+
           </div>
         </motion.div>
 
@@ -184,6 +279,17 @@ export default function Dashboard({ vehicles, drivers, trips, currentUser }) {
                 </tbody>
               </table>
             </div>
+
+            {filteredTrips.length > visibleTripsCount && (
+              <div className="flex justify-center mt-6 pt-4 border-t border-border/20">
+                <button
+                  onClick={() => setVisibleTripsCount(prev => prev + 10)}
+                  className="text-xs font-semibold text-electric hover:text-electric/80 transition-colors flex items-center gap-1.5 px-4 py-2 border border-border/80 rounded-md hover:bg-secondary/5 cursor-pointer shadow-sm"
+                >
+                  Load More (+10)
+                </button>
+              </div>
+            )}
           </motion.div>
 
           {/* Right: Vehicle Status */}

@@ -93,7 +93,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
   return (
     <div ref={containerRef} className="landing-page">
       <Navbar onEnterApp={onEnterApp} />
-      <Hero />
+      <Hero onEnterApp={onEnterApp} />
       <Problem />
       <HowItWorks />
       <Visualization />

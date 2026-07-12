@@ -113,8 +113,21 @@ async function initDatabase() {
   `);
 
   const userCount = await db.get('SELECT COUNT(*) as count FROM users');
-  if (userCount.count === 0) {
-    console.log('Database empty. Seeding starting datasets...');
+  const vehicleCount = await db.get('SELECT COUNT(*) as count FROM vehicles');
+  const driverCount = await db.get('SELECT COUNT(*) as count FROM drivers');
+  const tripCount = await db.get('SELECT COUNT(*) as count FROM trips');
+  const maintenanceCount = await db.get('SELECT COUNT(*) as count FROM maintenance');
+  const expenseCount = await db.get('SELECT COUNT(*) as count FROM expenses');
+  const fuelCount = await db.get('SELECT COUNT(*) as count FROM fuel');
+
+  if (userCount.count === 0 || 
+      vehicleCount.count === 0 || 
+      driverCount.count === 0 || 
+      tripCount.count === 0 || 
+      maintenanceCount.count === 0 || 
+      expenseCount.count === 0 || 
+      fuelCount.count === 0) {
+    console.log('One or more tables empty. Seeding starting datasets...');
     await seedDatabase();
   } else {
     console.log('Database connected successfully. Schema validated.');
@@ -123,61 +136,74 @@ async function initDatabase() {
 
 // Seeder Utility
 async function seedDatabase() {
-  await db.exec('DELETE FROM users');
-  await db.exec('DELETE FROM vehicles');
-  await db.exec('DELETE FROM drivers');
-  await db.exec('DELETE FROM trips');
-  await db.exec('DELETE FROM maintenance');
-  await db.exec('DELETE FROM expenses');
-  await db.exec('DELETE FROM fuel');
-
-  for (const u of INITIAL_USERS) {
-    await db.run(
-      'INSERT INTO users (email, password, role, name) VALUES (?, ?, ?, ?)',
-      [u.email, u.password, u.role, u.name]
-    );
+  const userCount = await db.get('SELECT COUNT(*) as count FROM users');
+  if (userCount.count === 0) {
+    for (const u of INITIAL_USERS) {
+      await db.run(
+        'INSERT INTO users (email, password, role, name) VALUES (?, ?, ?, ?)',
+        [u.email, u.password, u.role, u.name]
+      );
+    }
   }
 
-  for (const v of INITIAL_VEHICLES) {
-    await db.run(
-      'INSERT INTO vehicles (regNo, name, type, capacity, capacityUnit, odometer, acqCost, status, region) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [v.regNo, v.name, v.type, v.capacity, v.capacityUnit, v.odometer, v.acqCost, v.status, v.region]
-    );
+  const vehicleCount = await db.get('SELECT COUNT(*) as count FROM vehicles');
+  if (vehicleCount.count === 0) {
+    for (const v of INITIAL_VEHICLES) {
+      await db.run(
+        'INSERT INTO vehicles (regNo, name, type, capacity, capacityUnit, odometer, acqCost, status, region) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [v.regNo, v.name, v.type, v.capacity, v.capacityUnit, v.odometer, v.acqCost, v.status, v.region]
+      );
+    }
   }
 
-  for (const d of INITIAL_DRIVERS) {
-    await db.run(
-      'INSERT INTO drivers (licenseNo, name, category, expiry, contact, tripCompl, safetyScore, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [d.licenseNo, d.name, d.category, d.expiry, d.contact, d.tripCompl, d.safetyScore, d.status]
-    );
+  const driverCount = await db.get('SELECT COUNT(*) as count FROM drivers');
+  if (driverCount.count === 0) {
+    for (const d of INITIAL_DRIVERS) {
+      await db.run(
+        'INSERT INTO drivers (licenseNo, name, category, expiry, contact, tripCompl, safetyScore, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [d.licenseNo, d.name, d.category, d.expiry, d.contact, d.tripCompl, d.safetyScore, d.status]
+      );
+    }
   }
 
-  for (const t of INITIAL_TRIPS) {
-    await db.run(
-      'INSERT INTO trips (id, vehicle, driver, source, destination, cargoWeight, cargoWeightUnit, plannedDistance, status, eta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [t.id, t.vehicle, t.driver, t.source, t.destination, t.cargoWeight, t.cargoWeightUnit, t.plannedDistance, t.status, t.eta]
-    );
+  const tripCount = await db.get('SELECT COUNT(*) as count FROM trips');
+  if (tripCount.count === 0) {
+    for (const t of INITIAL_TRIPS) {
+      await db.run(
+        'INSERT INTO trips (id, vehicle, driver, source, destination, cargoWeight, cargoWeightUnit, plannedDistance, status, eta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [t.id, t.vehicle, t.driver, t.source, t.destination, t.cargoWeight, t.cargoWeightUnit, t.plannedDistance, t.status, t.eta]
+      );
+    }
   }
 
-  for (const m of INITIAL_MAINTENANCE) {
-    await db.run(
-      'INSERT INTO maintenance (id, vehicle, type, cost, description, status, date) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [m.id, m.vehicle, m.type, m.cost, m.description, m.status, m.date]
-    );
+  const maintenanceCount = await db.get('SELECT COUNT(*) as count FROM maintenance');
+  if (maintenanceCount.count === 0) {
+    for (const m of INITIAL_MAINTENANCE) {
+      await db.run(
+        'INSERT INTO maintenance (id, vehicle, type, cost, description, status, date) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [m.id, m.vehicle, m.type, m.cost, m.description, m.status, m.date]
+      );
+    }
   }
 
-  for (const e of INITIAL_EXPENSES) {
-    await db.run(
-      'INSERT INTO expenses (id, vehicle, type, amount, date, description) VALUES (?, ?, ?, ?, ?, ?)',
-      [e.id, e.vehicle, e.type, e.amount, e.date, e.description]
-    );
+  const expenseCount = await db.get('SELECT COUNT(*) as count FROM expenses');
+  if (expenseCount.count === 0) {
+    for (const e of INITIAL_EXPENSES) {
+      await db.run(
+        'INSERT INTO expenses (id, vehicle, type, amount, date, description) VALUES (?, ?, ?, ?, ?, ?)',
+        [e.id, e.vehicle, e.type, e.amount, e.date, e.description]
+      );
+    }
   }
 
-  for (const f of INITIAL_FUEL_LOGS) {
-    await db.run(
-      'INSERT INTO fuel (id, vehicle, cost, liters, date) VALUES (?, ?, ?, ?, ?)',
-      [f.id, f.vehicle, f.cost, f.liters, f.date]
-    );
+  const fuelCount = await db.get('SELECT COUNT(*) as count FROM fuel');
+  if (fuelCount.count === 0) {
+    for (const f of INITIAL_FUEL_LOGS) {
+      await db.run(
+        'INSERT INTO fuel (id, vehicle, cost, liters, date) VALUES (?, ?, ?, ?, ?)',
+        [f.id, f.vehicle, f.cost, f.liters, f.date]
+      );
+    }
   }
 
   console.log('Database successfully seeded!');

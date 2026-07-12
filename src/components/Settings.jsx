@@ -1,7 +1,7 @@
-﻿import React, { useState } from 'react';
-import { Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, Trash2, ShieldAlert } from 'lucide-react';
 
-export default function Settings({ currentUser }) {
+export default function Settings({ currentUser, users = [], setUsers, lockedEmails = [], setLockedEmails }) {
   const initials = currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'RK';
   const userName = currentUser?.name || 'Raven K.';
   const userRole = currentUser?.role || 'Dispatcher';
@@ -10,12 +10,72 @@ export default function Settings({ currentUser }) {
   const [currency, setCurrency] = useState('INR (Rs)');
   const [distanceUnit, setDistanceUnit] = useState('Kilometers');
 
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newRole, setNewRole] = useState('Dispatcher');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleUnlockUser = (emailToUnlock) => {
+    if (window.confirm(`Are you sure you want to unlock account: ${emailToUnlock}?`)) {
+      setLockedEmails(lockedEmails.filter(e => e.toLowerCase() !== emailToUnlock.toLowerCase()));
+      try {
+        const map = JSON.parse(localStorage.getItem('failedAttemptsMap') || '{}');
+        delete map[emailToUnlock.toLowerCase()];
+        localStorage.setItem('failedAttemptsMap', JSON.stringify(map));
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
   const rbacData = [
     { role: 'Fleet Manager', fleet: '✓', drivers: '✓', trips: '-', fuel: '-', analytics: '✓' },
     { role: 'Dispatcher', fleet: 'View', drivers: '-', trips: '✓', fuel: '-', analytics: '-' },
     { role: 'Safety Officer', fleet: '-', drivers: '✓', trips: 'View', fuel: '-', analytics: '-' },
     { role: 'Financial Analyst', fleet: 'View', drivers: '-', trips: '-', fuel: '✓', analytics: '✓' }
   ];
+
+  const handleAddUser = (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    if (!newName.trim() || !newEmail.trim() || !newPassword.trim() || !newRole) {
+      setErrorMsg('All fields are required.');
+      return;
+    }
+
+    if (users.some(u => u.email.toLowerCase() === newEmail.trim().toLowerCase())) {
+      setErrorMsg('A user with this email already exists.');
+      return;
+    }
+
+    const newUser = {
+      email: newEmail.trim().toLowerCase(),
+      password: newPassword,
+      role: newRole,
+      name: newName.trim()
+    };
+
+    setUsers([...users, newUser]);
+
+    // Reset form fields
+    setNewEmail('');
+    setNewPassword('');
+    setNewName('');
+    setNewRole('Dispatcher');
+  };
+
+  const handleDeleteUser = (emailToDelete) => {
+    if (emailToDelete === currentUser.email) {
+      alert('You cannot delete your own account while logged in.');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete user: ${emailToDelete}?`)) {
+      setUsers(users.filter(u => u.email !== emailToDelete));
+    }
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
@@ -26,6 +86,8 @@ export default function Settings({ currentUser }) {
           <input 
             type="text" 
             placeholder="Search..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
           />
         </div>
@@ -41,12 +103,12 @@ export default function Settings({ currentUser }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-8">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-16 max-w-7xl">
+      <div className="flex-1 overflow-y-auto p-8 space-y-12">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-16 max-w-[1600px] mx-auto">
           
           {/* Left Column: General */}
           <div className="flex flex-col gap-6">
-            <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-2">General</h3>
+            <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-2">General Settings</h3>
             
             <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
               <div className="space-y-1.5">
@@ -81,7 +143,7 @@ export default function Settings({ currentUser }) {
 
               <div className="pt-2">
                 <button type="submit" className="px-8 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
-                  Save changes
+                  Save General Changes
                 </button>
               </div>
             </form>
@@ -89,9 +151,9 @@ export default function Settings({ currentUser }) {
 
           {/* Right Column: Role-Based Access (RBAC) */}
           <div className="flex flex-col">
-            <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-8 shrink-0">Role-Based Access (RBAC)</h3>
+            <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-8 shrink-0">Role Permissions (RBAC)</h3>
             
-            <div className="w-full">
+            <div className="w-full bg-card border border-border/80 rounded-md shadow-sm overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr>
@@ -117,10 +179,155 @@ export default function Settings({ currentUser }) {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        {/* User Registry & Accounts Section */}
+        <div className="border-t border-border/50 pt-12 max-w-[1600px] mx-auto">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-16">
+            
+            {/* User List */}
+            <div className="flex flex-col gap-4">
+              <h3 className="text-xs font-bold text-muted uppercase tracking-widest">User Registry</h3>
+              
+              <div className="w-full bg-card border border-border/80 rounded-md shadow-sm overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Name</th>
+                      <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Email</th>
+                      <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Role</th>
+                      <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/20">
+                    {users.filter(u => {
+                      return searchQuery === '' ||
+                        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        u.role.toLowerCase().includes(searchQuery.toLowerCase());
+                    }).map((u) => {
+                      const isSelf = u.email === currentUser?.email;
+                      const isLocked = lockedEmails.includes(u.email.toLowerCase());
+                      return (
+                        <tr key={u.email} className="hover:bg-secondary/5 transition-colors">
+                          <td className="py-4 px-4 text-sm font-semibold">
+                            {u.name} 
+                            {isSelf && <span className="text-[10px] bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded ml-1 font-semibold">You</span>}
+                            {isLocked && <span className="text-[9px] bg-red-500/15 text-red-500 px-1.5 py-0.5 rounded ml-1 font-extrabold uppercase tracking-wide">Locked</span>}
+                          </td>
+                          <td className="py-4 px-4 text-sm text-secondary">{u.email}</td>
+                          <td className="py-4 px-4 text-sm">
+                            <span className="text-xs font-medium bg-orange-500/10 text-orange-500 px-2.5 py-1 rounded-md">
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex items-center justify-end gap-3">
+                              {isLocked && (
+                                <button
+                                  onClick={() => handleUnlockUser(u.email)}
+                                  className="text-[11px] text-green-500 hover:text-green-600 bg-green-500/10 hover:bg-green-500/20 px-2 py-1 rounded font-semibold transition-colors"
+                                  title="Unlock account"
+                                >
+                                  Unlock
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteUser(u.email)}
+                                disabled={isSelf}
+                                className="text-red-500 hover:text-red-600 disabled:opacity-30 p-1.5 hover:bg-red-500/10 rounded transition-colors"
+                                title={isSelf ? "Cannot delete yourself" : "Delete user"}
+                              >
+                                <Trash2 size={16} className="inline" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Create New User */}
+            <div className="flex flex-col gap-4">
+              <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Create New Account</h3>
+              
+              <div className="p-6 bg-card border border-border shadow-sm rounded-xl">
+                <form onSubmit={handleAddUser} className="space-y-4">
+                  {errorMsg && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-md text-xs font-semibold flex gap-2 items-center">
+                      <ShieldAlert size={14} />
+                      {errorMsg}
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Full Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. John Doe"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Email Address</label>
+                    <input 
+                      type="email" 
+                      placeholder="e.g. user@transitops.com"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Password</label>
+                    <input 
+                      type="password" 
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Role Assignment</label>
+                    <select
+                      value={newRole}
+                      onChange={(e) => setNewRole(e.target.value)}
+                      className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm appearance-none cursor-pointer"
+                      required
+                    >
+                      <option value="Fleet Manager">Fleet Manager</option>
+                      <option value="Dispatcher">Dispatcher</option>
+                      <option value="Safety Officer">Safety Officer</option>
+                      <option value="Financial Analyst">Financial Analyst</option>
+                    </select>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm mt-2"
+                  >
+                    Create User Account
+                  </button>
+                </form>
+              </div>
+            </div>
 
           </div>
-
         </div>
+
       </div>
     </div>
   );

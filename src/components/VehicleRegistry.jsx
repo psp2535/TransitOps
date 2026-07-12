@@ -25,8 +25,8 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
   const isManager = currentUser?.role === 'Fleet Manager' || currentUser?.role === 'Dispatcher'; // Giving dispatcher access for demo based on wireframe if needed
 
   let filteredVehicles = vehicles.filter((v) => {
-    const matchType = filterType === 'All' || v.type === filterType;
-    const matchStatus = filterStatus === 'All' || v.status === filterStatus;
+    const matchType = filterType === 'All' || v.type.toLowerCase() === filterType.toLowerCase();
+    const matchStatus = filterStatus === 'All' || v.status.toLowerCase() === filterStatus.toLowerCase();
     const matchSearch = v.regNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
                         v.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchType && matchStatus && matchSearch;
@@ -105,6 +105,8 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
           <input 
             type="text" 
             placeholder="Search..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
           />
         </div>

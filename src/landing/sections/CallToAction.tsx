@@ -62,7 +62,7 @@ export default function CallToAction({ onEnterApp }: CTAProps) {
                 <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
               </svg>
             </MagneticButton>
-            <MagneticButton variant="secondary">
+            <MagneticButton variant="secondary" onClick={onEnterApp}>
               Schedule a Demo
             </MagneticButton>
           </div>

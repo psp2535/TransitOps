@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -33,6 +33,15 @@ export default function App() {
   // Active page state
   const [activePage, setActivePage] = useState(1); // 1 = Dashboard
 
+  // Locked accounts tracking
+  const [lockedEmails, setLockedEmails] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('lockedEmails') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
   // Database states
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
@@ -42,6 +51,11 @@ export default function App() {
   const [fuelLogs, setFuelLogs] = useState([]);
   const [users, setUsers] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Sync lockedEmails to localStorage
+  useEffect(() => {
+    localStorage.setItem('lockedEmails', JSON.stringify(lockedEmails));
+  }, [lockedEmails]);
 
   // Sync theme
   useEffect(() => {
@@ -346,6 +360,8 @@ export default function App() {
             setUsers={setUsers} 
             onResetData={handleResetData} 
             currentUser={currentUser} 
+            lockedEmails={lockedEmails}
+            setLockedEmails={setLockedEmails}
           />
         );
       default:
@@ -353,7 +369,7 @@ export default function App() {
     }
   };
 
-  // Landing page â€” shown before login
+  // Landing page — shown before login
   if (showLanding) {
     return (
       <Suspense fallback={
@@ -368,7 +384,7 @@ export default function App() {
 
   // If not logged in, force Page 0 Authentication screen
   if (!currentUser) {
-    return <Login onLogin={setCurrentUser} />;
+    return <Login onLogin={setCurrentUser} users={users} setUsers={setUsers} lockedEmails={lockedEmails} setLockedEmails={setLockedEmails} />;
   }
 
   return (

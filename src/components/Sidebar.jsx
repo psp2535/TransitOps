@@ -10,10 +10,10 @@ export default function Sidebar({ activePage, setActivePage, currentUser, onLogo
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const menuItems = [
-    { id: 1, name: 'Overview', icon: LayoutDashboard },
-    { id: 2, name: 'Fleet Registry', icon: Truck },
+    { id: 1, name: 'Dashboard', icon: LayoutDashboard },
+    { id: 2, name: 'Fleet', icon: Truck },
     { id: 3, name: 'Drivers', icon: Users },
-    { id: 4, name: 'Dispatch & Trips', icon: Navigation },
+    { id: 4, name: 'Trips', icon: Navigation },
     { id: 5, name: 'Maintenance', icon: Wrench },
     { id: 6, name: 'Fuel & Expenses', icon: Coins },
     { id: 7, name: 'Analytics', icon: BarChart3 },
@@ -39,9 +39,10 @@ export default function Sidebar({ activePage, setActivePage, currentUser, onLogo
       {/* Collapse Toggle */}
       <button 
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-secondary border border-border flex items-center justify-center text-secondary-foreground shadow-sm hover:text-primary hover:border-electric transition-colors z-50"
+        className={`absolute ${isCollapsed ? '-right-4' : 'right-3'} top-7 w-8 h-8 rounded-full bg-card border-2 border-border flex items-center justify-center text-secondary-foreground hover:text-primary hover:border-electric hover:scale-105 active:scale-95 shadow-md transition-all z-50 cursor-pointer`}
+        title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
       >
-        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        {isCollapsed ? <ChevronRight size={16} className="shrink-0" /> : <ChevronLeft size={16} className="shrink-0" />}
       </button>
 
       {/* Brand */}
