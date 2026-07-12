@@ -11,17 +11,16 @@ import ReportsAnalytics from './components/ReportsAnalytics';
 import Settings from './components/Settings';
 import { Lock, RefreshCw, ShieldAlert, LogOut } from 'lucide-react';
 
-import {
-  INITIAL_VEHICLES,
-  INITIAL_DRIVERS,
-  INITIAL_TRIPS,
-  INITIAL_MAINTENANCE,
-  INITIAL_EXPENSES,
-  INITIAL_FUEL_LOGS,
-  INITIAL_USERS
-} from './initialData';
+// Lazy-load the landing page (code-split from the dashboard bundle)
+const LandingPage = lazy(() => import('./landing/LandingPage'));
 
 export default function App() {
+  // Landing page state
+  const [showLanding, setShowLanding] = useState(() => {
+    // Show landing if user hasn't entered the app yet this session
+    const entered = sessionStorage.getItem('enteredApp');
+    return !entered;
+  });
   // Theme state
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   
@@ -78,7 +77,7 @@ export default function App() {
       })
       .catch(err => {
         console.warn('Backend server not detected or offline. Falling back to local storage cache.', err);
-        // Offline local storage fallback
+        // Offline local storage fallback (no seed data on frontend — use cached or empty)
         const savedVehicles = localStorage.getItem('vehicles');
         const savedDrivers = localStorage.getItem('drivers');
         const savedTrips = localStorage.getItem('trips');
@@ -87,13 +86,13 @@ export default function App() {
         const savedFuel = localStorage.getItem('fuel');
         const savedUsers = localStorage.getItem('users');
 
-        setVehicles(savedVehicles ? JSON.parse(savedVehicles) : INITIAL_VEHICLES);
-        setDrivers(savedDrivers ? JSON.parse(savedDrivers) : INITIAL_DRIVERS);
-        setTrips(savedTrips ? JSON.parse(savedTrips) : INITIAL_TRIPS);
-        setMaintenanceLogs(savedMaint ? JSON.parse(savedMaint) : INITIAL_MAINTENANCE);
-        setExpenses(savedExpenses ? JSON.parse(savedExpenses) : INITIAL_EXPENSES);
-        setFuelLogs(savedFuel ? JSON.parse(savedFuel) : INITIAL_FUEL_LOGS);
-        setUsers(savedUsers ? JSON.parse(savedUsers) : INITIAL_USERS);
+        setVehicles(savedVehicles ? JSON.parse(savedVehicles) : []);
+        setDrivers(savedDrivers ? JSON.parse(savedDrivers) : []);
+        setTrips(savedTrips ? JSON.parse(savedTrips) : []);
+        setMaintenanceLogs(savedMaint ? JSON.parse(savedMaint) : []);
+        setExpenses(savedExpenses ? JSON.parse(savedExpenses) : []);
+        setFuelLogs(savedFuel ? JSON.parse(savedFuel) : []);
+        setUsers(savedUsers ? JSON.parse(savedUsers) : []);
         setIsLoaded(true);
       });
   }, []);
@@ -149,15 +148,8 @@ export default function App() {
           }
         })
         .catch(err => {
-          console.warn('Backend reset failed, resetting local browser cache only.', err);
-          setVehicles(INITIAL_VEHICLES);
-          setDrivers(INITIAL_DRIVERS);
-          setTrips(INITIAL_TRIPS);
-          setMaintenanceLogs(INITIAL_MAINTENANCE);
-          setExpenses(INITIAL_EXPENSES);
-          setFuelLogs(INITIAL_FUEL_LOGS);
-          setUsers(INITIAL_USERS);
-          alert('Database reset locally in your browser!');
+          console.warn('Backend reset failed.', err);
+          alert('Could not reset — backend server is offline.');
         });
     }
   };
@@ -192,6 +184,13 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setActivePage(1);
+    setShowLanding(true);
+    sessionStorage.removeItem('enteredApp');
+  };
+
+  const handleEnterApp = () => {
+    setShowLanding(false);
+    sessionStorage.setItem('enteredApp', 'true');
   };
 
   // Switch role directly from the access denied screen
@@ -359,9 +358,22 @@ export default function App() {
     }
   };
 
+  // Landing page — shown before login
+  if (showLanding) {
+    return (
+      <Suspense fallback={
+        <div style={{ background: '#030712', width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ color: '#00d4ff', fontFamily: 'Outfit, sans-serif', fontSize: '1.5rem', fontWeight: 700 }}>TransitOps</div>
+        </div>
+      }>
+        <LandingPage onEnterApp={handleEnterApp} />
+      </Suspense>
+    );
+  }
+
   // If not logged in, force Page 0 Authentication screen
   if (!currentUser) {
-    return <Login onLogin={setCurrentUser} users={users} />;
+    return <Login onLogin={setCurrentUser} />;
   }
 
   return (
