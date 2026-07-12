@@ -1,6 +1,7 @@
-﻿import React from 'react';
+import React, { useState } from 'react';
 
 export default function ReportsAnalytics({ vehicles, trips, fuelLogs, maintenanceLogs, expenses, currentUser }) {
+  const [searchQuery, setSearchQuery] = useState('');
   const initials = currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'RK';
   const userName = currentUser?.name || 'Raven K.';
   const userRole = currentUser?.role || 'Dispatcher';
@@ -50,6 +51,15 @@ export default function ReportsAnalytics({ vehicles, trips, fuelLogs, maintenanc
   const currentMonthHeight = Math.min(100, Math.max(10, (totalRevenue / 100000) * 100));
   const fullRevenueData = [...revenueData, currentMonthHeight];
 
+  // Generate dynamic labels for the last 7 months ending with the current month
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const last7Months = [];
+  const d = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    last7Months.push(monthNames[m.getMonth()]);
+  }
+
   return (
     <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
       
@@ -58,7 +68,9 @@ export default function ReportsAnalytics({ vehicles, trips, fuelLogs, maintenanc
         <div className="relative w-80">
           <input 
             type="text" 
-            placeholder="Search..." 
+            placeholder="Search vehicle cost..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
             className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
           />
         </div>
@@ -79,7 +91,7 @@ export default function ReportsAnalytics({ vehicles, trips, fuelLogs, maintenanc
         <div className="w-full max-w-[1600px] mx-auto space-y-6">
           
           {/* KPI Cards Row */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             
             <div className="bg-card border border-border/80 rounded-sm shadow-sm p-5 relative overflow-hidden transition-transform hover:-translate-y-1 duration-300">
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
@@ -117,9 +129,25 @@ export default function ReportsAnalytics({ vehicles, trips, fuelLogs, maintenanc
             {/* Monthly Revenue Bar Chart */}
             <div>
               <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-8">Monthly Revenue (6mo + Current)</h3>
-              <div className="h-64 flex items-end gap-2 border-b border-border/50 pb-2">
-                {fullRevenueData.map((height, idx) => (
-                  <div key={idx} className="flex-1 bg-accent/80 hover:bg-accent transition-colors rounded-t-sm" style={{ height: height + '%' }}></div>
+              <div className="h-64 flex items-end gap-3 border-b border-border/50 pb-2">
+                {fullRevenueData.map((height, idx) => {
+                  const value = Math.round(height * 2500); // Scale value for display/tooltip
+                  return (
+                    <div key={idx} className="flex-1 flex flex-col justify-end items-center h-full group relative">
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full mb-2 bg-accent text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md z-10">
+                        ₹{new Intl.NumberFormat('en-IN').format(value)}
+                      </div>
+                      {/* Bar */}
+                      <div className="w-full bg-accent/80 hover:bg-accent transition-colors rounded-t-sm cursor-pointer" style={{ height: height + '%' }}></div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* X-Axis Labels */}
+              <div className="flex justify-between gap-3 mt-2 px-1">
+                {last7Months.map((m, idx) => (
+                  <span key={idx} className="flex-1 text-center text-[10px] font-bold text-muted uppercase tracking-wider">{m}</span>
                 ))}
               </div>
             </div>
@@ -130,26 +158,40 @@ export default function ReportsAnalytics({ vehicles, trips, fuelLogs, maintenanc
               
               <div className="space-y-6">
                 
-                {costliestVehicles.map((cv, idx) => {
-                  const percentage = cv.cost > 0 ? (cv.cost / maxCost) * 90 : 0; // scale up to 90%
-                  const colors = ['bg-red-600', 'bg-orange-500', 'bg-blue-500'];
-                  
-                  return (
-                    <div key={cv.regNo} className="flex items-center gap-4">
-                      <div className="w-28 shrink-0 flex flex-col">
-                        <span className="text-xs font-bold text-secondary uppercase tracking-widest">{cv.regNo}</span>
-                        <span className="text-[10px] text-muted">₹{new Intl.NumberFormat('en-IN').format(cv.cost)}</span>
-                      </div>
-                      <div className="flex-1 h-4 bg-secondary/30 rounded-sm overflow-hidden">
-                        <div className={"h-full rounded-sm transition-all duration-1000 " + colors[idx]} style={{ width: percentage + '%' }}></div>
-                      </div>
-                    </div>
-                  )
-                })}
+                {(() => {
+                  const filteredCostliestVehicles = costliestVehicles.filter(cv => {
+                    const query = searchQuery.toLowerCase();
+                    const vObj = vehicles.find(v => v.regNo === cv.regNo || v.name === cv.regNo);
+                    const vehicleName = vObj ? vObj.name.toLowerCase() : '';
+                    return cv.regNo.toLowerCase().includes(query) || vehicleName.includes(query);
+                  });
 
-                {costliestVehicles.length === 0 && (
-                  <p className="text-sm text-muted">No cost data available.</p>
-                )}
+                  if (filteredCostliestVehicles.length === 0) {
+                    return (
+                      <p className="text-sm text-muted">No cost data matches search.</p>
+                    );
+                  }
+
+                  return filteredCostliestVehicles.map((cv, idx) => {
+                    const percentage = cv.cost > 0 ? (cv.cost / maxCost) * 90 : 0; // scale up to 90%
+                    const colors = ['bg-red-600', 'bg-orange-500', 'bg-blue-500'];
+                    const vObj = vehicles.find(v => v.regNo === cv.regNo || v.name === cv.regNo);
+                    const displayVehicle = vObj ? vObj.name : cv.regNo;
+                    const displaySub = vObj ? vObj.regNo : '';
+                    
+                    return (
+                      <div key={cv.regNo} className="flex items-center gap-4">
+                        <div className="w-32 shrink-0 flex flex-col">
+                          <span className="text-xs font-bold text-secondary uppercase tracking-widest truncate" title={displayVehicle}>{displayVehicle}</span>
+                          <span className="text-[10px] text-muted">{displaySub ? displaySub + ' • ' : ''}₹{new Intl.NumberFormat('en-IN').format(cv.cost)}</span>
+                        </div>
+                        <div className="flex-1 h-4 bg-secondary/30 rounded-sm overflow-hidden">
+                          <div className={"h-full rounded-sm transition-all duration-1000 " + colors[idx]} style={{ width: percentage + '%' }}></div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
 
               </div>
             </div>

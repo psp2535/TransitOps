@@ -108,8 +108,8 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
     <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
       
       {/* Top Bar matching wireframe */}
-      <div className="flex items-center justify-between px-8 py-3 border-b border-border/50 bg-card">
-        <div className="relative w-80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-8 py-3 border-b border-border/50 bg-card">
+        <div className="relative w-full sm:w-80">
           <input 
             type="text" 
             placeholder="Search..." 
@@ -180,7 +180,7 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
                   const isSelected = selectedDriverName === driver.name;
 
                   return (
-                    <tr key={driver.name} className={"transition-colors cursor-pointer " + (isSelected ? "bg-primary/20" : "hover:bg-secondary/5")} onClick={() => setSelectedDriverName(driver.name)}>
+                    <tr key={driver.name} className={"transition-all duration-200 cursor-pointer hover:translate-x-0.5 active:scale-[0.99] " + (isSelected ? "bg-primary/20" : "hover:bg-secondary/5")} onClick={() => setSelectedDriverName(driver.name)}>
                       <td className="py-4 px-6 text-sm">{driver.name}</td>
                       <td className="py-4 px-6 text-sm">{driver.licenseNo}</td>
                       <td className="py-4 px-6 text-sm">{driver.category}</td>

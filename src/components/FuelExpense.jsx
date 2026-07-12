@@ -1,10 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
-export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses, setExpenses, maintenanceLogs, currentUser }) {
+export default function FuelExpense({ vehicles, trips = [], fuelLogs, setFuelLogs, expenses, setExpenses, maintenanceLogs, currentUser }) {
   const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fuel Form State
   const [fVehicle, setFVehicle] = useState('');
@@ -66,11 +67,13 @@ export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses,
     <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
       
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-8 py-3 border-b border-border/50 bg-card">
-        <div className="relative w-80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-8 py-3 border-b border-border/50 bg-card">
+        <div className="relative w-full sm:w-80">
           <input 
             type="text" 
-            placeholder="Search..." 
+            placeholder="Search fuel & expenses..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
             className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
           />
         </div>
@@ -92,7 +95,7 @@ export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses,
           
           {/* FUEL LOGS SECTION */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Fuel Logs</h3>
               <div className="flex items-center gap-3">
                 <button onClick={() => setIsFuelModalOpen(true)} disabled={!isAuthorized} className="px-5 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
@@ -105,7 +108,8 @@ export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses,
             </div>
 
             <div className="w-full bg-card border border-border/80 rounded-md shadow-sm overflow-hidden">
-              <table className="w-full text-left border-collapse">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
                 <thead>
                   <tr>
                     <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Vehicle</th>
@@ -115,20 +119,46 @@ export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses,
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/20">
-                  {fuelLogs.length === 0 && (
-                    <tr><td colSpan="4" className="py-4 px-4 text-sm text-center text-muted">No fuel logs found.</td></tr>
-                  )}
-                  {fuelLogs.slice().reverse().map((log) => (
-                    <tr key={log.id} className="hover:bg-secondary/5 transition-colors">
-                      <td className="py-4 px-4 text-sm font-medium">{log.vehicle}</td>
-                      <td className="py-4 px-4 text-sm">{log.date}</td>
-                      <td className="py-4 px-4 text-sm">{log.liters} L</td>
-                      <td className="py-4 px-4 text-sm">{new Intl.NumberFormat('en-IN').format(log.cost)}</td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const filteredFuelLogs = fuelLogs.filter(log => {
+                      const query = searchQuery.toLowerCase();
+                      const vObj = vehicles.find(v => v.regNo === log.vehicle || v.name === log.vehicle);
+                      const vehicleName = vObj ? vObj.name.toLowerCase() : '';
+                      const vehicleReg = vObj ? vObj.regNo.toLowerCase() : '';
+
+                      return log.vehicle.toLowerCase().includes(query) ||
+                             vehicleName.includes(query) ||
+                             vehicleReg.includes(query) ||
+                             log.date.toLowerCase().includes(query) ||
+                             String(log.liters).includes(query) ||
+                             String(log.cost).includes(query);
+                    });
+
+                    if (filteredFuelLogs.length === 0) {
+                      return (
+                        <tr><td colSpan="4" className="py-4 px-4 text-sm text-center text-muted">No fuel logs found.</td></tr>
+                      );
+                    }
+
+                    return filteredFuelLogs.slice().reverse().map((log) => {
+                      const vObj = vehicles.find(v => v.regNo === log.vehicle || v.name === log.vehicle);
+                      const displayVehicle = vObj ? `${vObj.name} (${vObj.regNo})` : log.vehicle;
+
+                      return (
+                        <tr key={log.id} className="hover:bg-secondary/5 transition-colors">
+                          <td className="py-4 px-4 text-sm font-medium">{displayVehicle}</td>
+                          <td className="py-4 px-4 text-sm">{log.date}</td>
+                          <td className="py-4 px-4 text-sm">{log.liters} L</td>
+                          <td className="py-4 px-4 text-sm">{new Intl.NumberFormat('en-IN').format(log.cost)}</td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
           </div>
 
           {/* OTHER EXPENSES SECTION */}
@@ -136,36 +166,96 @@ export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses,
             <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Other Expenses (Toll / Misc)</h3>
             
             <div className="w-full bg-card border border-border/80 rounded-md shadow-sm overflow-hidden border-b-4 border-b-primary">
-              <table className="w-full text-left border-collapse">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
                 <thead>
                   <tr>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Trip</th>
                     <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Vehicle</th>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Expense Type</th>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Date</th>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Description</th>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Amount (₹)</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Toll (₹)</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Other (₹)</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Maint. (Linked) (₹)</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/20">
-                  {expenses.length === 0 && (
-                    <tr><td colSpan="5" className="py-4 px-4 text-sm text-center text-muted">No expenses recorded.</td></tr>
-                  )}
-                  {expenses.slice().reverse().map((expense) => (
-                    <tr key={expense.id} className="hover:bg-secondary/5 transition-colors">
-                      <td className="py-4 px-4 text-sm font-medium">{expense.vehicle}</td>
-                      <td className="py-4 px-4 text-sm">{expense.type}</td>
-                      <td className="py-4 px-4 text-sm">{expense.date}</td>
-                      <td className="py-4 px-4 text-sm">{expense.description}</td>
-                      <td className="py-4 px-4 text-sm font-medium">{new Intl.NumberFormat('en-IN').format(expense.amount)}</td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const filteredTrips = trips.filter(t => {
+                      const query = searchQuery.toLowerCase();
+                      const vObj = vehicles.find(v => v.regNo === t.vehicle || v.name === t.vehicle);
+                      const vehicleName = vObj ? vObj.name.toLowerCase() : '';
+                      const vehicleReg = vObj ? vObj.regNo.toLowerCase() : '';
+                      
+                      return t.id.toLowerCase().includes(query) ||
+                             t.vehicle.toLowerCase().includes(query) ||
+                             vehicleName.includes(query) ||
+                             vehicleReg.includes(query) ||
+                             t.status.toLowerCase().includes(query);
+                    });
+
+                    if (filteredTrips.length === 0) {
+                      return (
+                        <tr><td colSpan="6" className="py-4 px-4 text-sm text-center text-muted">No trip expenses found.</td></tr>
+                      );
+                    }
+
+                    return filteredTrips.slice().reverse().map((trip) => {
+                      const vObj = vehicles.find(v => v.regNo === trip.vehicle || v.name === trip.vehicle);
+                      const displayVehicle = vObj ? `${vObj.name} (${vObj.regNo})` : trip.vehicle;
+
+                      // Tolls for this vehicle
+                      const tollList = expenses.filter(e => (e.vehicle === trip.vehicle || (vObj && e.vehicle === vObj.regNo)) && e.type === 'Tolls');
+                      const totalToll = tollList.reduce((sum, e) => sum + e.amount, 0);
+
+                      // Other expenses (Fines, Parking, Other) for this vehicle
+                      const otherList = expenses.filter(e => (e.vehicle === trip.vehicle || (vObj && e.vehicle === vObj.regNo)) && e.type !== 'Tolls');
+                      const totalOther = otherList.reduce((sum, e) => sum + e.amount, 0);
+
+                      // Maintenance linked cost for this vehicle
+                      const maintList = (maintenanceLogs || []).filter(m => m.vehicle === trip.vehicle || (vObj && m.vehicle === vObj.regNo));
+                      const totalMaint = maintList.reduce((sum, m) => sum + m.cost, 0);
+
+                      // Status badge determination
+                      let statusText = 'Available';
+                      let badgeClass = 'bg-green-600 text-white';
+
+                      if (trip.status === 'Completed') {
+                        statusText = 'Completed';
+                        badgeClass = 'bg-green-600 text-white';
+                      } else if (vObj && vObj.status === 'On Trip') {
+                        statusText = 'On Trip';
+                        badgeClass = 'bg-blue-600 text-white';
+                      } else if (vObj && vObj.status === 'In Shop') {
+                        statusText = 'In Shop';
+                        badgeClass = 'bg-orange-600 text-white';
+                      } else if (trip.status === 'Cancelled') {
+                        statusText = 'Cancelled';
+                        badgeClass = 'bg-red-600 text-white';
+                      }
+
+                      return (
+                        <tr key={trip.id} className="hover:bg-secondary/5 transition-colors">
+                          <td className="py-4 px-4 text-sm font-semibold">{trip.id}</td>
+                          <td className="py-4 px-4 text-sm font-medium">{displayVehicle}</td>
+                          <td className="py-4 px-4 text-sm">₹{new Intl.NumberFormat('en-IN').format(totalToll)}</td>
+                          <td className="py-4 px-4 text-sm">₹{new Intl.NumberFormat('en-IN').format(totalOther)}</td>
+                          <td className="py-4 px-4 text-sm">₹{new Intl.NumberFormat('en-IN').format(totalMaint)}</td>
+                          <td className="py-4 px-4">
+                            <span className={"px-3 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase inline-block " + badgeClass}>
+                              {statusText}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
 
             {/* Total Footer */}
-            <div className="w-full pt-4 flex items-center justify-between border-t-4 border-t-primary dark:border-t-white/80">
-              <span className="text-xs font-bold text-secondary uppercase tracking-widest">
+            <div className="w-full pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t-4 border-t-primary dark:border-t-white/80">
+              <span className="text-xs font-bold text-secondary uppercase tracking-widest text-center sm:text-left">
                 Total Operational Cost (Auto) = Fuel + Maint + Expenses
               </span>
               <span className="text-lg font-bold text-orange-500">
@@ -199,11 +289,11 @@ export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses,
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Liters</label>
-                    <input type="number" step="0.1" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={fLiters} onChange={e => setFLiters(e.target.value)} required />
+                    <input type="number" step="0.1" min="0" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={fLiters} onChange={e => setFLiters(e.target.value)} required />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Total Cost (₹)</label>
-                    <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={fCost} onChange={e => setFCost(e.target.value)} required />
+                    <input type="number" min="0" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={fCost} onChange={e => setFCost(e.target.value)} required />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Date</label>
@@ -213,7 +303,7 @@ export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses,
               </div>
               <div className="p-6 border-t border-border/50 bg-card flex justify-end gap-3">
                 <button type="button" onClick={() => setIsFuelModalOpen(false)} className="px-6 py-2 bg-secondary/10 hover:bg-secondary/20 text-primary rounded-md text-sm font-semibold transition-colors">Cancel</button>
-                <button type="submit" form="fuel-form" className="px-8 py-2 bg-primary text-secondary rounded-md text-sm font-semibold transition-colors">Save Fuel Log</button>
+                <button type="submit" form="fuel-form" className="px-8 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">Save Fuel Log</button>
               </div>
             </motion.div>
           </div>
@@ -250,7 +340,7 @@ export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses,
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Amount (₹)</label>
-                    <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={eAmount} onChange={e => setEAmount(e.target.value)} required />
+                    <input type="number" min="0" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={eAmount} onChange={e => setEAmount(e.target.value)} required />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Description</label>
@@ -264,7 +354,7 @@ export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses,
               </div>
               <div className="p-6 border-t border-border/50 bg-card flex justify-end gap-3">
                 <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="px-6 py-2 bg-secondary/10 hover:bg-secondary/20 text-primary rounded-md text-sm font-semibold transition-colors">Cancel</button>
-                <button type="submit" form="expense-form" className="px-8 py-2 bg-primary text-secondary rounded-md text-sm font-semibold transition-colors">Save Expense</button>
+                <button type="submit" form="expense-form" className="px-8 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">Save Expense</button>
               </div>
             </motion.div>
           </div>

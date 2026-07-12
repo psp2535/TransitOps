@@ -22,7 +22,7 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
   const [region, setRegion] = useState('North');
   const [validationError, setValidationError] = useState('');
 
-  const isManager = currentUser?.role === 'Fleet Manager' || currentUser?.role === 'Dispatcher'; // Giving dispatcher access for demo based on wireframe if needed
+  const isManager = currentUser?.role === 'Fleet Manager';
 
   let filteredVehicles = vehicles.filter((v) => {
     const matchType = filterType === 'All' || v.type.toLowerCase() === filterType.toLowerCase();
@@ -100,8 +100,8 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
     <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
       
       {/* Top Bar matching wireframe */}
-      <div className="flex items-center justify-between px-8 py-3 border-b border-border/50 bg-card">
-        <div className="relative w-80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-8 py-3 border-b border-border/50 bg-card">
+        <div className="relative w-full sm:w-80">
           <input 
             type="text" 
             placeholder="Search..." 
@@ -124,7 +124,7 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
 
       <div className="flex-1 overflow-y-auto p-8 space-y-6">
         {/* Filters and Add Button */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-wrap gap-4 items-center">
             <div className="relative shadow-sm rounded-md">
               <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="text-sm bg-card border border-border/80 rounded-md px-4 py-1.5 text-primary outline-none focus:border-border appearance-none pr-8 min-w-[140px] cursor-pointer">
@@ -158,9 +158,11 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
             </div>
           </div>
           
-          <button onClick={openAddModal} className="flex items-center gap-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
-            <span>+</span> Add Vehicle
-          </button>
+          {isManager && (
+            <button onClick={openAddModal} className="flex items-center gap-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
+              <span>+</span> Add Vehicle
+            </button>
+          )}
         </div>
 
         {/* Main Table Container */}
@@ -187,7 +189,7 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
                   else if (vehicle.status === "Retired") statusClass = "bg-red-500 text-white";
 
                   return (
-                    <tr key={vehicle.regNo} className="hover:bg-secondary/5 transition-colors cursor-pointer" onClick={() => openEditModal(vehicle)}>
+                    <tr key={vehicle.regNo} className="hover:bg-secondary/5 transition-all duration-200 cursor-pointer hover:translate-x-0.5 active:scale-[0.99]" onClick={() => openEditModal(vehicle)}>
                       <td className="py-4 px-6 text-sm font-medium">{vehicle.regNo}</td>
                       <td className="py-4 px-6 text-sm">{vehicle.name}</td>
                       <td className="py-4 px-6 text-sm">{vehicle.type}</td>
@@ -229,7 +231,7 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
               className="relative w-full max-w-2xl bg-card border border-border shadow-2xl rounded-md overflow-hidden flex flex-col max-h-[90vh]"
             >
               <div className="flex items-center justify-between p-6 border-b border-border/50 bg-card">
-                <h3 className="text-lg font-bold text-primary">{modalMode === 'add' ? 'Add New Vehicle' : 'Edit Vehicle'}</h3>
+                <h3 className="text-lg font-bold text-primary">{modalMode === 'add' ? 'Add New Vehicle' : isManager ? 'Edit Vehicle' : 'Vehicle Details (Read Only)'}</h3>
                 <button onClick={() => setIsModalOpen(false)} className="p-2 text-muted hover:text-primary transition-colors bg-secondary/30 rounded-md border border-border">
                   <X size={16} />
                 </button>
@@ -247,16 +249,16 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Registration Number</label>
-                      <input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50" value={regNo} onChange={(e) => setRegNo(e.target.value)} required disabled={modalMode === 'edit'} />
+                      <input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50" value={regNo} onChange={(e) => setRegNo(e.target.value)} required disabled={modalMode === 'edit' || !isManager} />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Name/Model</label>
-                      <input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={name} onChange={(e) => setName(e.target.value)} required />
+                      <input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50" value={name} onChange={(e) => setName(e.target.value)} required disabled={!isManager} />
                     </div>
                     
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Vehicle Type</label>
-                      <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={type} onChange={(e) => setType(e.target.value)}>
+                      <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer disabled:opacity-50" value={type} onChange={(e) => setType(e.target.value)} disabled={!isManager}>
                         <option value="Van">Van</option>
                         <option value="Truck">Truck</option>
                         <option value="Mini">Mini</option>
@@ -266,8 +268,8 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Load Capacity</label>
                       <div className="flex gap-2">
-                        <input type="number" className="flex-1 px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={capacity} onChange={(e) => setCapacity(e.target.value)} min="1" required />
-                        <select className="w-24 px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={capacityUnit} onChange={(e) => setCapacityUnit(e.target.value)}>
+                        <input type="number" className="flex-1 px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50" value={capacity} onChange={(e) => setCapacity(e.target.value)} min="1" required disabled={!isManager} />
+                        <select className="w-24 px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer disabled:opacity-50" value={capacityUnit} onChange={(e) => setCapacityUnit(e.target.value)} disabled={!isManager}>
                           <option value="kg">kg</option>
                           <option value="Ton">Ton</option>
                         </select>
@@ -276,17 +278,17 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
 
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Odometer (KM)</label>
-                      <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={odometer} onChange={(e) => setOdometer(e.target.value)} min="0" required />
+                      <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50" value={odometer} onChange={(e) => setOdometer(e.target.value)} min="0" required disabled={!isManager} />
                     </div>
 
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Acquisition Cost (INR)</label>
-                      <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={acqCost} onChange={(e) => setAcqCost(e.target.value)} min="0" required />
+                      <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50" value={acqCost} onChange={(e) => setAcqCost(e.target.value)} min="0" required disabled={!isManager} />
                     </div>
 
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Status</label>
-                      <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50 appearance-none cursor-pointer" value={status} onChange={(e) => setStatus(e.target.value)}>
+                      <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50 appearance-none cursor-pointer" value={status} onChange={(e) => setStatus(e.target.value)} disabled={!isManager}>
                         <option value="Available">Available</option>
                         <option value="On Trip">On Trip</option>
                         <option value="In Shop">In Shop</option>
@@ -296,7 +298,7 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
 
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Operational Region</label>
-                      <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={region} onChange={(e) => setRegion(e.target.value)}>
+                      <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer disabled:opacity-50" value={region} onChange={(e) => setRegion(e.target.value)} disabled={!isManager}>
                         <option value="North">North</option>
                         <option value="East">East</option>
                         <option value="West">West</option>
@@ -305,7 +307,7 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
                     </div>
                   </div>
                   
-                  {modalMode === 'edit' && (
+                  {modalMode === 'edit' && isManager && (
                     <div className="pt-4 flex justify-between border-t border-border/50">
                       <button type="button" onClick={() => { handleDelete(regNo); setIsModalOpen(false); }} className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-md text-sm font-semibold transition-colors flex items-center gap-2">
                         <Trash2 size={16} /> Delete Vehicle
@@ -316,12 +318,20 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
               </div>
 
               <div className="p-6 border-t border-border/50 bg-card flex justify-end gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 bg-secondary/10 hover:bg-secondary/20 text-primary rounded-md text-sm font-semibold transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" form="vehicle-form" className="px-8 py-2 bg-primary text-secondary rounded-md text-sm font-semibold transition-colors">
-                  {modalMode === 'add' ? 'Add Vehicle' : 'Save Changes'}
-                </button>
+                {isManager ? (
+                  <>
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 bg-secondary/10 hover:bg-secondary/20 text-primary rounded-md text-sm font-semibold transition-colors">
+                      Cancel
+                    </button>
+                    <button type="submit" form="vehicle-form" className="px-8 py-2 bg-primary text-secondary rounded-md text-sm font-semibold transition-colors">
+                      {modalMode === 'add' ? 'Add Vehicle' : 'Save Changes'}
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-semibold transition-colors">
+                    Close
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>

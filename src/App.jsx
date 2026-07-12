@@ -9,7 +9,8 @@ import Maintenance from './components/Maintenance';
 import FuelExpense from './components/FuelExpense';
 import ReportsAnalytics from './components/ReportsAnalytics';
 import Settings from './components/Settings';
-import { Lock, RefreshCw, ShieldAlert, LogOut } from 'lucide-react';
+import { Lock, RefreshCw, ShieldAlert, LogOut, Menu } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 // Lazy-load the landing page (code-split from the dashboard bundle)
 const LandingPage = lazy(() => import('./landing/LandingPage'));
@@ -32,6 +33,7 @@ export default function App() {
 
   // Active page state
   const [activePage, setActivePage] = useState(1); // 1 = Dashboard
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Locked accounts tracking
   const [lockedEmails, setLockedEmails] = useState(() => {
@@ -51,6 +53,26 @@ export default function App() {
   const [fuelLogs, setFuelLogs] = useState([]);
   const [users, setUsers] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [settings, setSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('transitops_settings');
+      return saved ? JSON.parse(saved) : {
+        depotName: 'Gandhinagar Depot GJ4',
+        currency: 'INR (Rs)',
+        distanceUnit: 'Kilometers'
+      };
+    } catch {
+      return {
+        depotName: 'Gandhinagar Depot GJ4',
+        currency: 'INR (Rs)',
+        distanceUnit: 'Kilometers'
+      };
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('transitops_settings', JSON.stringify(settings));
+  }, [settings]);
 
   // Sync lockedEmails to localStorage
   useEffect(() => {
@@ -182,14 +204,14 @@ export default function App() {
       return ![1, 2, 4, 8].includes(pageId);
     }
 
-    // Safety Officer: Dashboard, Drivers, Settings
+    // Safety Officer: Dashboard, Drivers, Trips (View), Settings
     if (role === 'Safety Officer') {
-      return ![1, 3, 8].includes(pageId);
+      return ![1, 3, 4, 8].includes(pageId);
     }
 
-    // Financial Analyst: Dashboard, Expenses, Reports, Settings
+    // Financial Analyst: Dashboard, Fleet (View), Expenses, Reports, Settings
     if (role === 'Financial Analyst') {
-      return ![1, 6, 7, 8].includes(pageId);
+      return ![1, 2, 6, 7, 8].includes(pageId);
     }
 
     return true;
@@ -230,57 +252,86 @@ export default function App() {
       };
 
       const requiredRoles = {
-        2: 'Fleet Manager / Dispatcher',
+        2: 'Fleet Manager / Dispatcher / Financial Analyst',
         3: 'Safety Officer / Fleet Manager',
-        4: 'Dispatcher / Fleet Manager',
+        4: 'Dispatcher / Fleet Manager / Safety Officer',
         5: 'Fleet Manager',
         6: 'Financial Analyst / Fleet Manager',
         7: 'Financial Analyst / Fleet Manager'
       };
 
       return (
-        <div className="access-denied-container">
-          <div className="access-denied-card">
-            <div className="lock-icon-container">
-              <Lock size={36} className="lock-icon" />
+        <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-void via-primary to-void min-h-[calc(100vh-80px)]">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="w-full max-w-md p-8 bg-card border border-border shadow-2xl rounded-2xl flex flex-col items-center text-center relative overflow-hidden backdrop-blur-md"
+          >
+            {/* Background glowing circle */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-red-500/10 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-electric/10 blur-3xl pointer-events-none" />
+
+            {/* Glowing lock illustration */}
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-6 shadow-lg shadow-red-500/10 relative">
+              <div className="absolute inset-0 rounded-2xl bg-red-500/5 animate-pulse" />
+              <Lock size={28} className="text-red-500 relative z-10" />
             </div>
-            <h2>Access Restricted</h2>
-            <p className="denied-desc">
-              The <strong>{pageNames[activePage] || 'Requested Page'}</strong> is scoped by RBAC security rules.
+
+            <h2 className="text-2xl font-bold tracking-tight text-primary mb-2">Access Restricted</h2>
+            <p className="text-sm text-secondary max-w-sm mb-6">
+              The <span className="text-electric font-semibold">{pageNames[activePage] || 'Requested Page'}</span> is protected by Role-Based Access Control (RBAC) security rules.
             </p>
-            
-            <div className="denied-info-box">
-              <div className="info-row">
-                <span className="info-label">Your Current Role:</span>
-                <span className="info-value current-role">{currentUser.role}</span>
+
+            {/* Info Box */}
+            <div className="w-full p-5 bg-primary/40 border border-border/60 rounded-xl space-y-3 mb-6 text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted uppercase tracking-wider">Your Role</span>
+                <span className="px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/20 rounded-md text-xs font-bold uppercase tracking-wider">
+                  {currentUser.role}
+                </span>
               </div>
-              <div className="info-row">
-                <span className="info-label">Required Roles:</span>
-                <span className="info-value required-role">{requiredRoles[activePage] || 'Authorized Personnel'}</span>
+              <div className="h-px bg-border/40" />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-muted uppercase tracking-wider">Required Access</span>
+                <span className="text-xs font-bold text-emerald-500 leading-relaxed">
+                  {requiredRoles[activePage] || 'Authorized Personnel'}
+                </span>
               </div>
             </div>
 
-            <div className="quick-switch-section">
-              <p>Quick switch to an authorized role to unlock this tab:</p>
-              <div className="quick-switch-buttons">
+            {/* Quick Switch Panel */}
+            <div className="w-full space-y-3 mb-6">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider block">
+                Quick switch role to unlock this tab
+              </span>
+              <div className="grid grid-cols-2 gap-2">
                 {['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst']
                   .filter(r => r !== currentUser.role)
                   .map(r => (
-                    <button
+                    <motion.button
                       key={r}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleQuickRoleSwitch(r)}
-                      className="btn btn-secondary btn-sm switch-btn"
+                      className="px-4 py-2 text-xs font-bold text-secondary bg-secondary/35 hover:bg-secondary/55 border border-border/80 rounded-lg transition-all duration-200 hover:text-primary hover:border-electric cursor-pointer shadow-sm"
                     >
                       {r}
-                    </button>
+                    </motion.button>
                   ))}
               </div>
             </div>
 
-            <button onClick={() => setActivePage(1)} className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }}>
+            {/* Return Button */}
+            <motion.button 
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActivePage(1)} 
+              className="w-full py-3 bg-electric hover:bg-electric-hover text-void rounded-xl text-sm font-bold transition-all duration-200 shadow-lg shadow-electric/20 cursor-pointer"
+            >
               Return to Dashboard
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </div>
       );
     }
@@ -334,6 +385,7 @@ export default function App() {
         return (
           <FuelExpense 
             vehicles={vehicles} 
+            trips={trips}
             fuelLogs={fuelLogs} 
             setFuelLogs={setFuelLogs} 
             expenses={expenses} 
@@ -362,6 +414,8 @@ export default function App() {
             currentUser={currentUser} 
             lockedEmails={lockedEmails}
             setLockedEmails={setLockedEmails}
+            settings={settings}
+            setSettings={setSettings}
           />
         );
       default:
@@ -388,21 +442,56 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-primary overflow-hidden">
+    <div className="flex h-screen w-full bg-primary overflow-hidden relative">
+      {/* Sidebar Overlay for Mobile */}
+      {isMobileSidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-void/60 backdrop-blur-sm z-40 transition-opacity duration-300"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <Sidebar 
-        activePage={activePage} 
-        setActivePage={setActivePage} 
-        currentUser={currentUser} 
-        theme={theme} 
-        setTheme={setTheme} 
-        onLogout={handleLogout} 
-        isPageRestricted={isPageRestricted}
-      />
+      <div className={`
+        fixed inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out shrink-0
+        ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <Sidebar 
+          activePage={activePage} 
+          setActivePage={(page) => {
+            setActivePage(page);
+            setIsMobileSidebarOpen(false);
+          }} 
+          currentUser={currentUser} 
+          theme={theme} 
+          setTheme={setTheme} 
+          onLogout={handleLogout} 
+          isPageRestricted={isPageRestricted}
+          settings={settings}
+        />
+      </div>
 
       {/* Main Panel Content Area */}
       <main className="flex-1 flex flex-col h-full overflow-y-auto relative">
-        {renderPageContent()}
+        {/* Mobile Header */}
+        <header className="lg:hidden flex items-center justify-between px-6 py-3 bg-secondary border-b border-border shrink-0 z-30">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="p-2 -ml-2 text-muted hover:text-primary rounded-md hover:bg-primary/50 transition-colors"
+            >
+              <Menu size={20} />
+            </button>
+            <h1 className="font-heading font-bold text-md text-primary">TransitOps</h1>
+          </div>
+          <span className="text-[10px] bg-electric/10 text-electric px-2.5 py-1 rounded-md border border-electric/20 font-bold uppercase tracking-wider max-w-[120px] truncate">
+            {settings.depotName || 'GJ4'}
+          </span>
+        </header>
+
+        <div className="flex-1 overflow-y-auto">
+          {renderPageContent()}
+        </div>
       </main>
     </div>
   );

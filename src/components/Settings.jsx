@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
-import { Check, Trash2, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trash2, ShieldAlert } from 'lucide-react';
 
-export default function Settings({ currentUser, users = [], setUsers, lockedEmails = [], setLockedEmails }) {
+export default function Settings({ currentUser, users = [], setUsers, lockedEmails = [], setLockedEmails, settings = {}, setSettings }) {
   const initials = currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'RK';
   const userName = currentUser?.name || 'Raven K.';
   const userRole = currentUser?.role || 'Dispatcher';
 
-  const [depotName, setDepotName] = useState('Gandhinagar Depot GJ4');
-  const [currency, setCurrency] = useState('INR (Rs)');
-  const [distanceUnit, setDistanceUnit] = useState('Kilometers');
+  const [depotName, setDepotName] = useState(settings.depotName || 'Gandhinagar Depot GJ4');
+  const [currency, setCurrency] = useState(settings.currency || 'INR (Rs)');
+  const [distanceUnit, setDistanceUnit] = useState(settings.distanceUnit || 'Kilometers');
+
+  useEffect(() => {
+    if (settings) {
+      setDepotName(settings.depotName || 'Gandhinagar Depot GJ4');
+      setCurrency(settings.currency || 'INR (Rs)');
+      setDistanceUnit(settings.distanceUnit || 'Kilometers');
+    }
+  }, [settings]);
 
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -107,77 +115,101 @@ export default function Settings({ currentUser, users = [], setUsers, lockedEmai
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-16 max-w-[1600px] mx-auto">
           
           {/* Left Column: General */}
-          <div className="flex flex-col gap-6">
-            <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-2">General Settings</h3>
+          <div className="flex flex-col gap-4">
+            <h3 className="text-xs font-bold text-muted uppercase tracking-widest">General Settings</h3>
             
-            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Depot Name</label>
-                <input 
-                  type="text" 
-                  value={depotName}
-                  onChange={(e) => setDepotName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
-                />
-              </div>
+            <div className="p-6 bg-card border border-border shadow-sm rounded-xl">
+              <form className="space-y-6" onSubmit={(e) => {
+                e.preventDefault();
+                setSettings({
+                  depotName,
+                  currency,
+                  distanceUnit
+                });
+                alert('General settings saved successfully!');
+              }}>
+                <div className="space-y-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Depot Name</label>
+                    <input 
+                      type="text" 
+                      value={depotName}
+                      onChange={(e) => setDepotName(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Currency</label>
-                <input 
-                  type="text" 
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
-                />
-              </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Currency</label>
+                    <input 
+                      type="text" 
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Distance Unit</label>
-                <input 
-                  type="text" 
-                  value={distanceUnit}
-                  onChange={(e) => setDistanceUnit(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
-                />
-              </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Distance Unit</label>
+                    <input 
+                      type="text" 
+                      value={distanceUnit}
+                      onChange={(e) => setDistanceUnit(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
+                    />
+                  </div>
+                </div>
 
-              <div className="pt-2">
-                <button type="submit" className="px-8 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
-                  Save General Changes
-                </button>
-              </div>
-            </form>
+                <div className="pt-6 border-t border-border/40 mt-6">
+                  <button type="submit" className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
+                    Save General Changes
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
 
           {/* Right Column: Role-Based Access (RBAC) */}
-          <div className="flex flex-col">
-            <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-8 shrink-0">Role Permissions (RBAC)</h3>
+          <div className="flex flex-col gap-4">
+            <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Role Permissions (RBAC)</h3>
             
-            <div className="w-full bg-card border border-border/80 rounded-md shadow-sm overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Role</th>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Fleet</th>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Drivers</th>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Trips</th>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Fuel/Exp.</th>
-                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Analytics</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20">
-                  {rbacData.map((row, index) => (
-                    <tr key={index} className="hover:bg-secondary/5 transition-colors">
-                      <td className="py-4 px-4 text-sm font-semibold text-primary">{row.role}</td>
-                      <td className="py-4 px-4 text-sm text-secondary">{row.fleet === '✓' ? <Check size={16} /> : row.fleet}</td>
-                      <td className="py-4 px-4 text-sm text-secondary">{row.drivers === '✓' ? <Check size={16} /> : row.drivers}</td>
-                      <td className="py-4 px-4 text-sm text-secondary">{row.trips === '✓' ? <Check size={16} /> : row.trips}</td>
-                      <td className="py-4 px-4 text-sm text-secondary">{row.fuel === '✓' ? <Check size={16} /> : row.fuel}</td>
-                      <td className="py-4 px-4 text-sm text-secondary">{row.analytics === '✓' ? <Check size={16} /> : row.analytics}</td>
+            <div className="w-full bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Role</th>
+                      <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Fleet</th>
+                      <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Drivers</th>
+                      <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Trips</th>
+                      <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Fuel/Exp.</th>
+                      <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Analytics</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-border/20">
+                    {rbacData.map((row, index) => (
+                      <tr key={index} className="hover:bg-secondary/5 transition-colors">
+                        <td className="py-4 px-6 text-sm font-semibold text-primary">{row.role}</td>
+                        <td className="py-4 px-6 text-sm">
+                          {row.fleet === '✓' ? <span className="text-green-500 font-semibold">✓ Full</span> : row.fleet === 'View' ? <span className="text-blue-500 text-xs font-semibold">View</span> : <span className="text-muted/40 font-semibold">-</span>}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          {row.drivers === '✓' ? <span className="text-green-500 font-semibold">✓ Full</span> : row.drivers === 'View' ? <span className="text-blue-500 text-xs font-semibold">View</span> : <span className="text-muted/40 font-semibold">-</span>}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          {row.trips === '✓' ? <span className="text-green-500 font-semibold">✓ Full</span> : row.trips === 'View' ? <span className="text-blue-500 text-xs font-semibold">View</span> : <span className="text-muted/40 font-semibold">-</span>}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          {row.fuel === '✓' ? <span className="text-green-500 font-semibold">✓ Full</span> : row.fuel === 'View' ? <span className="text-blue-500 text-xs font-semibold">View</span> : <span className="text-muted/40 font-semibold">-</span>}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          {row.analytics === '✓' ? <span className="text-green-500 font-semibold">✓ Full</span> : row.analytics === 'View' ? <span className="text-blue-500 text-xs font-semibold">View</span> : <span className="text-muted/40 font-semibold">-</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -190,64 +222,66 @@ export default function Settings({ currentUser, users = [], setUsers, lockedEmai
             <div className="flex flex-col gap-4">
               <h3 className="text-xs font-bold text-muted uppercase tracking-widest">User Registry</h3>
               
-              <div className="w-full bg-card border border-border/80 rounded-md shadow-sm overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Name</th>
-                      <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Email</th>
-                      <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Role</th>
-                      <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/20">
-                    {users.filter(u => {
-                      return searchQuery === '' ||
-                        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        u.role.toLowerCase().includes(searchQuery.toLowerCase());
-                    }).map((u) => {
-                      const isSelf = u.email === currentUser?.email;
-                      const isLocked = lockedEmails.includes(u.email.toLowerCase());
-                      return (
-                        <tr key={u.email} className="hover:bg-secondary/5 transition-colors">
-                          <td className="py-4 px-4 text-sm font-semibold">
-                            {u.name} 
-                            {isSelf && <span className="text-[10px] bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded ml-1 font-semibold">You</span>}
-                            {isLocked && <span className="text-[9px] bg-red-500/15 text-red-500 px-1.5 py-0.5 rounded ml-1 font-extrabold uppercase tracking-wide">Locked</span>}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-secondary">{u.email}</td>
-                          <td className="py-4 px-4 text-sm">
-                            <span className="text-xs font-medium bg-orange-500/10 text-orange-500 px-2.5 py-1 rounded-md">
-                              {u.role}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4 text-right">
-                            <div className="flex items-center justify-end gap-3">
-                              {isLocked && (
+              <div className="w-full bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Name</th>
+                        <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Email</th>
+                        <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Role</th>
+                        <th className="py-3.5 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {users.filter(u => {
+                        return searchQuery === '' ||
+                          u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          u.role.toLowerCase().includes(searchQuery.toLowerCase());
+                      }).map((u) => {
+                        const isSelf = u.email === currentUser?.email;
+                        const isLocked = lockedEmails.includes(u.email.toLowerCase());
+                        return (
+                          <tr key={u.email} className="hover:bg-secondary/5 transition-colors">
+                            <td className="py-4 px-6 text-sm font-semibold">
+                              {u.name} 
+                              {isSelf && <span className="text-[10px] bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded ml-1 font-semibold">You</span>}
+                              {isLocked && <span className="text-[9px] bg-red-500/15 text-red-500 px-1.5 py-0.5 rounded ml-1 font-extrabold uppercase tracking-wide">Locked</span>}
+                            </td>
+                            <td className="py-4 px-6 text-sm text-secondary">{u.email}</td>
+                            <td className="py-4 px-6 text-sm">
+                              <span className="text-xs font-medium bg-orange-500/10 text-orange-500 px-2.5 py-1 rounded-md">
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6 text-right">
+                              <div className="flex items-center justify-end gap-3">
+                                {isLocked && (
+                                  <button
+                                    onClick={() => handleUnlockUser(u.email)}
+                                    className="text-[11px] text-green-500 hover:text-green-600 bg-green-500/10 hover:bg-green-500/20 px-2 py-1 rounded font-semibold transition-colors"
+                                    title="Unlock account"
+                                  >
+                                    Unlock
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => handleUnlockUser(u.email)}
-                                  className="text-[11px] text-green-500 hover:text-green-600 bg-green-500/10 hover:bg-green-500/20 px-2 py-1 rounded font-semibold transition-colors"
-                                  title="Unlock account"
+                                  onClick={() => handleDeleteUser(u.email)}
+                                  disabled={isSelf}
+                                  className="text-red-500 hover:text-red-600 disabled:opacity-30 p-1.5 hover:bg-red-500/10 rounded transition-colors"
+                                  title={isSelf ? "Cannot delete yourself" : "Delete user"}
                                 >
-                                  Unlock
+                                  <Trash2 size={16} className="inline" />
                                 </button>
-                              )}
-                              <button
-                                onClick={() => handleDeleteUser(u.email)}
-                                disabled={isSelf}
-                                className="text-red-500 hover:text-red-600 disabled:opacity-30 p-1.5 hover:bg-red-500/10 rounded transition-colors"
-                                title={isSelf ? "Cannot delete yourself" : "Delete user"}
-                              >
-                                <Trash2 size={16} className="inline" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -305,7 +339,7 @@ export default function Settings({ currentUser, users = [], setUsers, lockedEmai
                     <select
                       value={newRole}
                       onChange={(e) => setNewRole(e.target.value)}
-                      className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm appearance-none cursor-pointer"
+                      className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm cursor-pointer"
                       required
                     >
                       <option value="Fleet Manager">Fleet Manager</option>

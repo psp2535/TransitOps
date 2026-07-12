@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function Sidebar({ activePage, setActivePage, currentUser, onLogout, theme, setTheme, isPageRestricted }) {
+export default function Sidebar({ activePage, setActivePage, currentUser, onLogout, theme, setTheme, isPageRestricted, settings = {} }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const menuItems = [
@@ -59,7 +59,9 @@ export default function Sidebar({ activePage, setActivePage, currentUser, onLogo
               className="whitespace-nowrap"
             >
               <h1 className="font-heading font-bold text-lg leading-tight tracking-tight">TransitOps</h1>
-              <p className="text-[10px] text-muted font-semibold uppercase tracking-wider">Command Center</p>
+              <p className="text-[9px] text-muted font-bold uppercase tracking-wider truncate max-w-[150px]" title={settings.depotName || 'Command Center'}>
+                {settings.depotName || 'Command Center'}
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -76,7 +78,7 @@ export default function Sidebar({ activePage, setActivePage, currentUser, onLogo
             <button
               key={item.id}
               onClick={() => setActivePage(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group relative overflow-hidden ${active ? 'text-primary' : 'text-secondary hover:bg-primary/40 hover:text-primary'}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 transform hover:translate-x-1 active:scale-[0.98] group relative overflow-hidden ${active ? 'text-primary' : 'text-secondary hover:bg-primary/40 hover:text-primary'}`}
             >
               {active && (
                 <motion.div layoutId="activeNavIndicator" className="absolute inset-0 bg-electric/10 rounded-lg" />
@@ -111,7 +113,7 @@ export default function Sidebar({ activePage, setActivePage, currentUser, onLogo
       <div className="p-4 border-t border-border/50 bg-secondary/50 space-y-2">
         <button 
           onClick={handleThemeToggle}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-secondary hover:text-primary hover:bg-primary/50 transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-secondary hover:text-primary hover:bg-primary/50 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
         >
           {theme === 'dark' ? <Sun size={18} className="shrink-0" /> : <Moon size={18} className="shrink-0" />}
           <AnimatePresence>
@@ -136,13 +138,13 @@ export default function Sidebar({ activePage, setActivePage, currentUser, onLogo
             )}
           </AnimatePresence>
           {!isCollapsed && (
-            <button onClick={onLogout} className="p-1.5 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors shrink-0">
+            <button onClick={onLogout} className="p-1.5 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-md transition-all duration-200 transform hover:scale-110 active:scale-90 shrink-0">
               <LogOut size={16} />
             </button>
           )}
         </div>
         {isCollapsed && (
-           <button onClick={onLogout} className="w-full flex justify-center p-2 mt-1 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors">
+           <button onClick={onLogout} className="w-full flex justify-center p-2 mt-1 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-md transition-all duration-200 transform hover:scale-105 active:scale-95">
               <LogOut size={16} />
            </button>
         )}

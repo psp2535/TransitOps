@@ -1,5 +1,5 @@
-﻿import React, { useState } from 'react';
-import { ArrowRight, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRight, Check, X } from 'lucide-react';
 
 export default function Maintenance({ maintenanceLogs, setMaintenanceLogs, vehicles, setVehicles, currentUser }) {
   const [selectedVehicleReg, setSelectedVehicleReg] = useState('');
@@ -9,6 +9,7 @@ export default function Maintenance({ maintenanceLogs, setMaintenanceLogs, vehic
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState('In Shop');
   const [formError, setFormError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isAuthorized = currentUser?.role === 'Fleet Manager';
 
@@ -36,7 +37,9 @@ export default function Maintenance({ maintenanceLogs, setMaintenanceLogs, vehic
 
     // Update vehicle status
     if (status === 'In Shop') {
-      setVehicles(vehicles.map(v => v.regNo === selectedVehicleReg ? { ...v, status: 'In Shop' } : v));
+      setVehicles(vehicles.map(v => (v.regNo === selectedVehicleReg || v.name === selectedVehicleReg) ? { ...v, status: 'In Shop' } : v));
+    } else if (status === 'Completed') {
+      setVehicles(vehicles.map(v => (v.regNo === selectedVehicleReg || v.name === selectedVehicleReg) ? { ...v, status: 'Available' } : v));
     }
 
     // Reset
@@ -50,7 +53,13 @@ export default function Maintenance({ maintenanceLogs, setMaintenanceLogs, vehic
   const handleComplete = (logId, vehicleReg) => {
     if (!isAuthorized) return;
     setMaintenanceLogs(maintenanceLogs.map(log => log.id === logId ? { ...log, status: 'Completed' } : log));
-    setVehicles(vehicles.map(v => v.regNo === vehicleReg ? { ...v, status: 'Available' } : v));
+    setVehicles(vehicles.map(v => (v.regNo === vehicleReg || v.name === vehicleReg) ? { ...v, status: 'Available' } : v));
+  };
+
+  const handleCancel = (logId, vehicleReg) => {
+    if (!isAuthorized) return;
+    setMaintenanceLogs(maintenanceLogs.map(log => log.id === logId ? { ...log, status: 'Cancelled' } : log));
+    setVehicles(vehicles.map(v => (v.regNo === vehicleReg || v.name === vehicleReg) ? { ...v, status: 'Available' } : v));
   };
 
   const initials = currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'RK';
@@ -63,11 +72,13 @@ export default function Maintenance({ maintenanceLogs, setMaintenanceLogs, vehic
     <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
       
       {/* Top Bar matching wireframe */}
-      <div className="flex items-center justify-between px-8 py-3 border-b border-border/50 bg-card">
-        <div className="relative w-80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-8 py-3 border-b border-border/50 bg-card">
+        <div className="relative w-full sm:w-80">
           <input 
             type="text" 
-            placeholder="Search..." 
+            placeholder="Search maintenance logs..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
             className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
           />
         </div>
@@ -84,10 +95,10 @@ export default function Maintenance({ maintenanceLogs, setMaintenanceLogs, vehic
       </div>
 
       <div className="flex-1 overflow-y-auto p-8">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 max-w-[1600px] mx-auto">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-12 max-w-[1600px] mx-auto">
           
           {/* Left Column: Log Service Record */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 xl:col-span-4">
             <div>
               <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-4">Log Service Record</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -178,7 +189,7 @@ export default function Maintenance({ maintenanceLogs, setMaintenanceLogs, vehic
           </div>
 
           {/* Right Column: Service Log */}
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full xl:col-span-8">
             <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-4 shrink-0">Service Log</h3>
             
             <div className="bg-card border border-border shadow-sm rounded-md overflow-hidden">
@@ -194,35 +205,63 @@ export default function Maintenance({ maintenanceLogs, setMaintenanceLogs, vehic
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
-                    {maintenanceLogs.length === 0 && (
-                      <tr><td colSpan="5" className="py-4 px-6 text-sm text-center text-muted">No maintenance logs found.</td></tr>
-                    )}
-                    {maintenanceLogs.slice().reverse().map((log) => {
-                      let statusClass = "bg-border text-primary";
-                      if (log.status === "In Shop") statusClass = "bg-orange-500 text-white";
-                      else if (log.status === "Completed") statusClass = "bg-green-500 text-white";
+                    {(() => {
+                      const filteredLogs = maintenanceLogs.filter(log => {
+                        const query = searchQuery.toLowerCase();
+                        const vObj = vehicles.find(v => v.regNo === log.vehicle || v.name === log.vehicle);
+                        const vehicleName = vObj ? vObj.name.toLowerCase() : '';
+                        const vehicleReg = vObj ? vObj.regNo.toLowerCase() : '';
+                        
+                        return log.vehicle.toLowerCase().includes(query) ||
+                               vehicleName.includes(query) ||
+                               vehicleReg.includes(query) ||
+                               log.type.toLowerCase().includes(query) ||
+                               log.status.toLowerCase().includes(query) ||
+                               (log.description || '').toLowerCase().includes(query);
+                      });
 
-                      return (
-                        <tr key={log.id} className="hover:bg-secondary/5 transition-colors">
-                          <td className="py-4 px-6 text-sm font-medium">{log.vehicle}</td>
-                          <td className="py-4 px-6 text-sm">{log.type}</td>
-                          <td className="py-4 px-6 text-sm font-medium">{new Intl.NumberFormat('en-IN').format(log.cost)}</td>
-                          <td className="py-4 px-6 text-sm">{log.date}</td>
-                          <td className="py-4 px-6">
-                            <div className="flex items-center gap-2">
-                              <span className={"px-4 py-1.5 rounded-md text-xs font-medium " + statusClass}>
-                                {log.status}
-                              </span>
-                              {log.status === 'In Shop' && isAuthorized && (
-                                <button onClick={() => handleComplete(log.id, log.vehicle)} className="p-1 rounded-md text-green-500 hover:bg-green-500/10 transition-colors" title="Mark as Completed">
-                                  <Check size={16} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
+                      if (filteredLogs.length === 0) {
+                        return (
+                          <tr><td colSpan="5" className="py-4 px-6 text-sm text-center text-muted">No maintenance logs found.</td></tr>
+                        );
+                      }
+
+                      return filteredLogs.slice().reverse().map((log) => {
+                        let statusClass = "bg-border text-primary";
+                        if (log.status === "In Shop") statusClass = "bg-orange-500 text-white";
+                        else if (log.status === "Completed") statusClass = "bg-green-500 text-white";
+                        else if (log.status === "Cancelled") statusClass = "bg-red-500 text-white";
+
+                        const vObj = vehicles.find(v => v.regNo === log.vehicle || v.name === log.vehicle);
+                        const displayVehicle = vObj ? `${vObj.name} (${vObj.regNo})` : log.vehicle;
+
+                        return (
+                          <tr key={log.id} className="hover:bg-secondary/5 transition-colors">
+                            <td className="py-4 px-6 text-sm font-medium">{displayVehicle}</td>
+                            <td className="py-4 px-6 text-sm">{log.type}</td>
+                            <td className="py-4 px-6 text-sm font-medium">{new Intl.NumberFormat('en-IN').format(log.cost)}</td>
+                            <td className="py-4 px-6 text-sm">{log.date}</td>
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-2">
+                                <span className={"px-4 py-1.5 rounded-md text-xs font-medium " + statusClass}>
+                                  {log.status}
+                                </span>
+                                {log.status === 'In Shop' && isAuthorized && (
+                                  <div className="flex items-center gap-1">
+                                    <button onClick={() => handleComplete(log.id, log.vehicle)} className="p-1 rounded-md text-green-500 hover:bg-green-500/10 transition-all duration-200 transform hover:scale-110 active:scale-90 cursor-pointer" title="Mark as Completed">
+                                      <Check size={16} />
+                                    </button>
+                                    <button onClick={() => handleCancel(log.id, log.vehicle)} className="p-1 rounded-md text-red-500 hover:bg-red-500/10 transition-all duration-200 transform hover:scale-110 active:scale-90 cursor-pointer" title="Cancel Service">
+                                      <X size={16} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>

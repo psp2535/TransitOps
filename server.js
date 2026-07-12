@@ -272,6 +272,14 @@ app.get('/api/db', async (req, res) => {
 // 2. Reset database
 app.post('/api/reset', async (req, res) => {
   try {
+    await db.run('DELETE FROM users');
+    await db.run('DELETE FROM vehicles');
+    await db.run('DELETE FROM drivers');
+    await db.run('DELETE FROM trips');
+    await db.run('DELETE FROM maintenance');
+    await db.run('DELETE FROM expenses');
+    await db.run('DELETE FROM fuel');
+
     await seedDatabase();
     const users = await db.all('SELECT * FROM users');
     const vehicles = await db.all('SELECT * FROM vehicles');
