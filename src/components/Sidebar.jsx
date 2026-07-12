@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -10,10 +10,14 @@ import {
   Settings, 
   LogOut,
   Moon,
-  Sun
+  Sun,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function Sidebar({ activePage, setActivePage, currentUser, onLogout, theme, setTheme }) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   const menuItems = [
     { id: 1, name: 'Dashboard', icon: LayoutDashboard, roles: ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst'] },
     { id: 2, name: 'Fleet', icon: Truck, roles: ['Fleet Manager', 'Dispatcher', 'Financial Analyst'] },
@@ -35,7 +39,17 @@ export default function Sidebar({ activePage, setActivePage, currentUser, onLogo
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      {/* Sidebar Collapse Toggle Button */}
+      <button 
+        onClick={() => setIsCollapsed(!isCollapsed)} 
+        className="sidebar-collapse-toggle"
+        title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        aria-label="Toggle Sidebar"
+      >
+        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+      </button>
+
       <div className="sidebar-brand">
         <div className="brand-logo">
           <Truck size={28} className="logo-icon" />

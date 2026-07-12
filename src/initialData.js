@@ -1,4 +1,3 @@
-// TransitOps - Database Initial Seeds
 export const INITIAL_USERS = [
   { email: 'manager@transitops.com', password: 'password123', role: 'Fleet Manager', name: 'Alex M.' },
   { email: 'RavenK@transitops.in', password: 'password123', role: 'Dispatcher', name: 'Raven K.' },

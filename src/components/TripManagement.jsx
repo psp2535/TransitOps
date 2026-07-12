@@ -1,4 +1,3 @@
-// TransitOps - Trip Dispatch & Lifecycle Control
 import React, { useState } from 'react';
 import { 
   Play, 

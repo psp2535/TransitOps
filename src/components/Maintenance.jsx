@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
-import { Wrench, ShieldAlert, CheckCircle2, Calendar, DollarSign, Text } from 'lucide-react';
+import { 
+  Wrench, 
+  ShieldAlert, 
+  CheckCircle2, 
+  Calendar, 
+  DollarSign, 
+  Search, 
+  Filter, 
+  ChevronDown, 
+  ChevronUp, 
+  Trash2, 
+  Clock, 
+  AlertTriangle 
+} from 'lucide-react';
 
 export default function Maintenance({ 
   maintenanceLogs, 
@@ -15,13 +28,25 @@ export default function Maintenance({
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('In Shop');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-
   const [formError, setFormError] = useState('');
+
+  // Search & Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [filterType, setFilterType] = useState('All');
+  const [expandedLogId, setExpandedLogId] = useState(null);
 
   const isManager = currentUser?.role === 'Fleet Manager';
 
   // Filter vehicles: can log maintenance for any vehicle except retired ones
   const activeVehicles = vehicles.filter(v => v.status !== 'Retired');
+
+  // Compute KPI values
+  const vehiclesInShopCount = vehicles.filter(v => v.status === 'In Shop').length;
+  
+  const totalSpend = maintenanceLogs.reduce((sum, log) => sum + Number(log.cost || 0), 0);
+  
+  const completedCount = maintenanceLogs.filter(log => log.status === 'Completed').length;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -34,6 +59,16 @@ export default function Maintenance({
 
     const vehicleObj = vehicles.find(v => v.regNo === selectedVehicleReg);
     if (!vehicleObj) return;
+
+    if (Number(cost) < 0) {
+      setFormError('Service cost cannot be negative.');
+      return;
+    }
+
+    if (description.trim().length < 5) {
+      setFormError('Please provide a brief description (at least 5 characters).');
+      return;
+    }
 
     // Create log
     const logId = `M0${maintenanceLogs.length + 1}`;
@@ -77,13 +112,36 @@ export default function Maintenance({
 
     // Restore vehicle status to Available (unless retired)
     setVehicles(vehicles.map(v => {
-      if (v.regNo === log.vehicleRegNo) {
-        // If retired, keep retired, otherwise set to Available
+      // Find matching vehicle by name or registration
+      if (v.name === log.vehicle || v.regNo === log.vehicleRegNo) {
         const targetStatus = v.status === 'Retired' ? 'Retired' : 'Available';
         return { ...v, status: targetStatus };
       }
       return v;
     }));
+  };
+
+  // Delete maintenance log
+  const handleDeleteLog = (log) => {
+    if (!isManager) return;
+    if (!window.confirm(`Are you sure you want to delete maintenance record ${log.id}?`)) return;
+
+    // If the deleted record was active in shop, release the vehicle
+    if (log.status === 'In Shop') {
+      setVehicles(vehicles.map(v => {
+        if (v.name === log.vehicle || v.regNo === log.vehicleRegNo) {
+          return { ...v, status: 'Available' };
+        }
+        return v;
+      }));
+    }
+
+    setMaintenanceLogs(maintenanceLogs.filter(l => l.id !== log.id));
+  };
+
+  // Toggle notes drawer
+  const toggleRowNotes = (logId) => {
+    setExpandedLogId(expandedLogId === logId ? null : logId);
   };
 
   // Helper to format currency
@@ -95,18 +153,63 @@ export default function Maintenance({
     }).format(val);
   };
 
+  // Apply Search and Filters to logs
+  const filteredLogs = maintenanceLogs.filter(log => {
+    const matchesSearch = log.vehicle.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (log.vehicleRegNo && log.vehicleRegNo.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesStatus = filterStatus === 'All' || log.status === filterStatus;
+    
+    const matchesType = filterType === 'All' || log.type === filterType;
+    
+    return matchesSearch && matchesStatus && matchesType;
+  });
+
   return (
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Maintenance Logs</h1>
-          <p className="page-subtitle">Schedule repairs and track workshop logs</p>
+          <h1 className="page-title">Maintenance & Workshop</h1>
+          <p className="page-subtitle">Schedule repairs, track workshop statuses, and evaluate service histories</p>
+        </div>
+      </div>
+
+      {/* KPI Cards Grid */}
+      <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
+        <div className="kpi-card border-orange">
+          <div className="kpi-icon-wrapper text-orange">
+            <Wrench size={24} />
+          </div>
+          <div className="kpi-details">
+            <span className="kpi-label">VEHICLES IN SHOP</span>
+            <h2 className="kpi-value">{vehiclesInShopCount}</h2>
+          </div>
+        </div>
+
+        <div className="kpi-card border-blue">
+          <div className="kpi-icon-wrapper text-blue">
+            <DollarSign size={24} />
+          </div>
+          <div className="kpi-details">
+            <span className="kpi-label">TOTAL SPENT</span>
+            <h2 className="kpi-value" style={{ fontSize: '1.5rem' }}>{formatCurrency(totalSpend)}</h2>
+          </div>
+        </div>
+
+        <div className="kpi-card border-green">
+          <div className="kpi-icon-wrapper text-green">
+            <CheckCircle2 size={24} />
+          </div>
+          <div className="kpi-details">
+            <span className="kpi-label">COMPLETED SERVICES</span>
+            <h2 className="kpi-value">{completedCount}</h2>
+          </div>
         </div>
       </div>
 
       <div className="split-layout">
-        {/* Left: Log Service Record */}
-        <div className="card">
+        {/* Left Form Panel */}
+        <div className="card" style={{ alignSelf: 'flex-start' }}>
           <h3 className="card-section-title">LOG SERVICE RECORD</h3>
           
           {!isManager && (
@@ -119,7 +222,7 @@ export default function Maintenance({
           <form onSubmit={handleSubmit}>
             {formError && (
               <div className="validation-alert" style={{ marginBottom: '1.25rem' }}>
-                <ShieldAlert size={16} />
+                <AlertTriangle size={16} />
                 <span>{formError}</span>
               </div>
             )}
@@ -230,16 +333,64 @@ export default function Maintenance({
 
           <div className="table-rules-footer" style={{ marginTop: '1.5rem' }}>
             <p>
-              Rules: Creating an active maintenance record automatically changes vehicle status to 
+              Rule: Creating an active maintenance record automatically changes vehicle status to 
               <strong> In Shop</strong>. Closing maintenance restores the vehicle to 
               <strong> Available</strong> (unless retired).
             </p>
           </div>
         </div>
 
-        {/* Right: Service Log Table */}
+        {/* Right Searchable Table Panel */}
         <div className="card">
-          <h3 className="card-section-title">SERVICE LOG</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+            <h3 className="card-section-title" style={{ margin: 0 }}>SERVICE HISTORY LOG</h3>
+            
+            {/* Search and Filters Bar */}
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div className="input-with-icon" style={{ flex: 1, minWidth: '200px' }}>
+                <Search size={16} className="input-icon" />
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search vehicle name or reg number..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              <div className="input-with-icon" style={{ width: '130px' }}>
+                <Filter size={14} className="input-icon" />
+                <select
+                  className="form-control select-control"
+                  style={{ paddingLeft: '2rem' }}
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="In Shop">In Shop</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+
+              <div className="input-with-icon" style={{ width: '150px' }}>
+                <Filter size={14} className="input-icon" />
+                <select
+                  className="form-control select-control"
+                  style={{ paddingLeft: '2rem' }}
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                >
+                  <option value="All">All Services</option>
+                  <option value="Oil Change">Oil Change</option>
+                  <option value="Brake Pad Replacement">Brake Pad Replacement</option>
+                  <option value="Tire Rotation">Tire Rotation</option>
+                  <option value="Engine Tuning">Engine Tuning</option>
+                  <option value="Body Work">Body Work</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+          </div>
           
           <div className="table-responsive">
             <table className="table">
@@ -250,49 +401,92 @@ export default function Maintenance({
                   <th>COST</th>
                   <th>DATE</th>
                   <th>STATUS</th>
-                  {isManager && <th style={{ textAlign: 'right' }}>ACTIONS</th>}
+                  <th style={{ textAlign: 'right' }}>ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
-                {maintenanceLogs.length === 0 ? (
+                {filteredLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={isManager ? 6 : 5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                      No service records logged.
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                      No service records match the current filters.
                     </td>
                   </tr>
                 ) : (
-                  maintenanceLogs.map((log) => (
-                    <tr key={log.id}>
-                      <td style={{ fontWeight: 600 }}>{log.vehicle}</td>
-                      <td>{log.type}</td>
-                      <td>{formatCurrency(log.cost)}</td>
-                      <td>{log.date}</td>
-                      <td>
-                        <span className={`badge badge-${log.status.replace(/\s+/g, '').toLowerCase()}`}>
-                          {log.status}
-                        </span>
-                      </td>
-                      {isManager && (
-                        <td style={{ textAlign: 'right' }}>
-                          {log.status === 'In Shop' ? (
-                            <button
-                              onClick={() => handleCloseService(log)}
-                              className="btn btn-secondary btn-sm"
-                              style={{ color: '#16a34a', borderColor: '#86efac', background: 'rgba(34, 197, 94, 0.05)' }}
-                              title="Complete and release vehicle"
-                            >
-                              <CheckCircle2 size={12} />
-                              <span style={{ marginLeft: '0.25rem' }}>Resolve</span>
-                            </button>
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                              Closed
+                  filteredLogs.map((log) => {
+                    const isExpanded = expandedLogId === log.id;
+                    return (
+                      <React.Fragment key={log.id}>
+                        {/* Main row */}
+                        <tr style={{ cursor: 'pointer' }} onClick={() => toggleRowNotes(log.id)}>
+                          <td style={{ fontWeight: 600 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              {isExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
+                              <span>{log.vehicle}</span>
+                            </div>
+                          </td>
+                          <td>{log.type}</td>
+                          <td>{formatCurrency(log.cost)}</td>
+                          <td>{log.date}</td>
+                          <td>
+                            <span className={`badge badge-${log.status.replace(/\s+/g, '').toLowerCase()}`}>
+                              {log.status === 'In Shop' ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <Clock size={10} className="spin" />
+                                  In Shop
+                                </span>
+                              ) : log.status}
                             </span>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))
+                          </td>
+                          <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', alignItems: 'center' }}>
+                              {log.status === 'In Shop' && isManager && (
+                                <button
+                                  onClick={() => handleCloseService(log)}
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ color: '#16a34a', borderColor: '#86efac', background: 'rgba(34, 197, 94, 0.05)' }}
+                                  title="Complete and release vehicle"
+                                >
+                                  <CheckCircle2 size={12} />
+                                  <span style={{ marginLeft: '0.25rem' }}>Resolve</span>
+                                </button>
+                              )}
+                              {isManager && (
+                                <button
+                                  onClick={() => handleDeleteLog(log)}
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)' }}
+                                  title="Delete record"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                              {!isManager && (
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                  {log.status === 'Completed' ? 'Closed' : 'Active'}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Collapsible notes row */}
+                        {isExpanded && (
+                          <tr className="expanded-detail-row">
+                            <td colSpan={6} style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1rem 1.5rem' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.05em' }}>
+                                  Service Notes / Log Details ({log.id})
+                                </span>
+                                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: 1.5 }}>
+                                  {log.description || 'No notes provided for this service record.'}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>

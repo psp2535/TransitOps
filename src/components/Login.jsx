@@ -1,21 +1,22 @@
-// TransitOps - User Authentication Portal
 import React, { useState } from 'react';
 import { Truck, ShieldAlert, Key, Mail, ShieldCheck } from 'lucide-react';
 import { INITIAL_USERS } from '../initialData';
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, users }) {
   const [email, setEmail] = useState('RavenK@transitops.in');
   const [password, setPassword] = useState('password123');
   const [role, setRole] = useState('Dispatcher');
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
+  const userList = users && users.length > 0 ? users : INITIAL_USERS;
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
-    // Check against INITIAL_USERS
-    const user = INITIAL_USERS.find(
+    // Check against dynamic database users
+    const user = userList.find(
       (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
     );
 
@@ -143,9 +144,9 @@ export default function Login({ onLogin }) {
           <div className="quick-logins">
             <p className="quick-login-title">Quick Demo Login (Click to Autofill):</p>
             <div className="quick-login-grid">
-              {INITIAL_USERS.map((u) => (
+              {userList.map((u) => (
                 <button
-                  key={u.role}
+                  key={u.role || u.email}
                   type="button"
                   className="quick-login-btn"
                   onClick={() => fillCredentials(u)}
