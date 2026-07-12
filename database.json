@@ -1,0 +1,277 @@
+{
+  "vehicles": [
+    {
+      "regNo": "GJ01AB4521",
+      "name": "VAN-05",
+      "type": "Van",
+      "capacity": 500,
+      "capacityUnit": "kg",
+      "odometer": 74000,
+      "acqCost": 620000,
+      "status": "Available",
+      "region": "North"
+    },
+    {
+      "regNo": "GJ01AB9981",
+      "name": "TRUCK-11",
+      "type": "Truck",
+      "capacity": 5,
+      "capacityUnit": "Ton",
+      "odometer": 182000,
+      "acqCost": 2450000,
+      "status": "On Trip",
+      "region": "East"
+    },
+    {
+      "regNo": "GJ01AB1120",
+      "name": "MINI-03",
+      "type": "Mini",
+      "capacity": 1,
+      "capacityUnit": "Ton",
+      "odometer": 66000,
+      "acqCost": 410000,
+      "status": "In Shop",
+      "region": "West"
+    },
+    {
+      "regNo": "GJ01AB0087",
+      "name": "VAN-09",
+      "type": "Van",
+      "capacity": 750,
+      "capacityUnit": "kg",
+      "odometer": 241900,
+      "acqCost": 590000,
+      "status": "Retired",
+      "region": "South"
+    },
+    {
+      "regNo": "MH02XY5533",
+      "name": "MINI-08",
+      "type": "Mini",
+      "capacity": 800,
+      "capacityUnit": "kg",
+      "odometer": 95000,
+      "acqCost": 450000,
+      "status": "Available",
+      "region": "West"
+    },
+    {
+      "regNo": "DL03CZ1234",
+      "name": "TRK-12",
+      "type": "Truck",
+      "capacity": 8,
+      "capacityUnit": "Ton",
+      "odometer": 112000,
+      "acqCost": 2800000,
+      "status": "Available",
+      "region": "North"
+    },
+    {
+      "regNo": "GJ01ZZ9999",
+      "name": "VAN-99",
+      "type": "Van",
+      "capacity": 900,
+      "capacityUnit": "kg",
+      "odometer": 1000,
+      "acqCost": 500000,
+      "status": "Available",
+      "region": "West"
+    }
+  ],
+  "drivers": [
+    {
+      "name": "Alex",
+      "licenseNo": "DL-88213",
+      "category": "LMV",
+      "expiry": "2028-12-31",
+      "contact": "98765xxxxx",
+      "tripCompl": "96%",
+      "safetyScore": 96,
+      "status": "Available"
+    },
+    {
+      "name": "John",
+      "licenseNo": "DL-44120",
+      "category": "HMV",
+      "expiry": "2025-03-15",
+      "contact": "98220xxxxx",
+      "tripCompl": "81%",
+      "safetyScore": 81,
+      "status": "Suspended"
+    },
+    {
+      "name": "Priya",
+      "licenseNo": "DL-77031",
+      "category": "LMV",
+      "expiry": "2027-08-15",
+      "contact": "99110xxxxx",
+      "tripCompl": "99%",
+      "safetyScore": 99,
+      "status": "On Trip"
+    },
+    {
+      "name": "Suresh",
+      "licenseNo": "DL-90045",
+      "category": "HMV",
+      "expiry": "2027-01-20",
+      "contact": "97440xxxxx",
+      "tripCompl": "88%",
+      "safetyScore": 88,
+      "status": "Off Duty"
+    }
+  ],
+  "trips": [
+    {
+      "id": "TR001",
+      "vehicle": "VAN-05",
+      "driver": "Alex",
+      "source": "San Francisco Depot",
+      "destination": "LA Neighborhood Hub",
+      "cargoWeight": 450,
+      "cargoWeightUnit": "kg",
+      "plannedDistance": 380,
+      "status": "On Trip",
+      "eta": "45 min"
+    },
+    {
+      "id": "TR002",
+      "vehicle": "TRK-12",
+      "driver": "John",
+      "source": "Chicago Warehouse",
+      "destination": "Detroit Retail Store",
+      "cargoWeight": 4000,
+      "cargoWeightUnit": "kg",
+      "plannedDistance": 280,
+      "status": "Completed",
+      "eta": "-"
+    },
+    {
+      "id": "TR003",
+      "vehicle": "MINI-08",
+      "driver": "Priya",
+      "source": "Seattle Industrial Zone",
+      "destination": "Portland Storefront",
+      "cargoWeight": 600,
+      "cargoWeightUnit": "kg",
+      "plannedDistance": 175,
+      "status": "Dispatched",
+      "eta": "1h 10m"
+    },
+    {
+      "id": "TR006",
+      "vehicle": "",
+      "driver": "",
+      "source": "Boston Distribution Center",
+      "destination": "New York Central Hub",
+      "cargoWeight": 300,
+      "cargoWeightUnit": "kg",
+      "plannedDistance": 215,
+      "status": "Draft",
+      "eta": "Awaiting vehicle"
+    }
+  ],
+  "maintenance": [
+    {
+      "id": "M001",
+      "vehicle": "MINI-03",
+      "type": "Oil Change",
+      "cost": 12000,
+      "description": "Routine 10k mile oil change and filter replacement.",
+      "status": "In Shop",
+      "date": "2026-07-10"
+    },
+    {
+      "id": "M002",
+      "vehicle": "VAN-09",
+      "type": "Brake Pad Replacement",
+      "cost": 18000,
+      "description": "Replaced front brake pads and rotors.",
+      "status": "Completed",
+      "date": "2026-07-05"
+    },
+    {
+      "id": "M003",
+      "vehicle": "VAN-05",
+      "type": "Tire Rotation",
+      "cost": 6000,
+      "description": "All tires rotated and aligned.",
+      "status": "Completed",
+      "date": "2026-06-28"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "E001",
+      "vehicle": "VAN-05",
+      "type": "Tolls",
+      "amount": 800,
+      "date": "2026-07-11",
+      "description": "Highway 101 tolls"
+    },
+    {
+      "id": "E002",
+      "vehicle": "TRUCK-11",
+      "type": "Tolls",
+      "amount": 2500,
+      "date": "2026-07-10",
+      "description": "State line transit tolls"
+    },
+    {
+      "id": "E003",
+      "vehicle": "MINI-03",
+      "type": "Other",
+      "amount": 1500,
+      "date": "2026-07-08",
+      "description": "Overnight warehouse parking fee"
+    }
+  ],
+  "fuel": [
+    {
+      "id": "F001",
+      "vehicle": "VAN-05",
+      "cost": 4500,
+      "liters": 45,
+      "date": "2026-07-11"
+    },
+    {
+      "id": "F002",
+      "vehicle": "TRUCK-11",
+      "cost": 18000,
+      "liters": 150,
+      "date": "2026-07-10"
+    },
+    {
+      "id": "F003",
+      "vehicle": "MINI-03",
+      "cost": 3500,
+      "liters": 32,
+      "date": "2026-07-09"
+    }
+  ],
+  "users": [
+    {
+      "email": "manager@transitops.com",
+      "password": "password123",
+      "role": "Fleet Manager",
+      "name": "Alex M."
+    },
+    {
+      "email": "RavenK@transitops.in",
+      "password": "password123",
+      "role": "Dispatcher",
+      "name": "Raven K."
+    },
+    {
+      "email": "safety@transitops.com",
+      "password": "password123",
+      "role": "Safety Officer",
+      "name": "Sarah S."
+    },
+    {
+      "email": "finance@transitops.com",
+      "password": "password123",
+      "role": "Financial Analyst",
+      "name": "Finn A."
+    }
+  ]
+}

@@ -23,7 +23,3 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local database files
-database.sqlite
-database.sqlite-journal
-database.json
