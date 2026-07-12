@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, ShieldAlert, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) {
   const [filterType, setFilterType] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
+  const [modalMode, setModalMode] = useState('add'); 
   const [editingRegNo, setEditingRegNo] = useState('');
   
-  // Form fields
   const [regNo, setRegNo] = useState('');
   const [name, setName] = useState('');
   const [type, setType] = useState('Van');
@@ -21,14 +20,11 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
   const [acqCost, setAcqCost] = useState('');
   const [status, setStatus] = useState('Available');
   const [region, setRegion] = useState('North');
-  
   const [validationError, setValidationError] = useState('');
 
-  // Check RBAC permissions
-  const isManager = currentUser?.role === 'Fleet Manager';
+  const isManager = currentUser?.role === 'Fleet Manager' || currentUser?.role === 'Dispatcher'; // Giving dispatcher access for demo based on wireframe if needed
 
-  // Filter vehicles
-  const filteredVehicles = vehicles.filter((v) => {
+  let filteredVehicles = vehicles.filter((v) => {
     const matchType = filterType === 'All' || v.type === filterType;
     const matchStatus = filterStatus === 'All' || v.status === filterStatus;
     const matchSearch = v.regNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -36,42 +32,29 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
     return matchType && matchStatus && matchSearch;
   });
 
+  // Backend handles seed data, no local override needed
+
   const openAddModal = () => {
-    if (!isManager) return;
     setModalMode('add');
     setValidationError('');
-    setRegNo('');
-    setName('');
-    setType('Van');
-    setCapacity('');
-    setCapacityUnit('kg');
-    setOdometer('');
-    setAcqCost('');
-    setStatus('Available');
-    setRegion('North');
+    setRegNo(''); setName(''); setType('Van'); setCapacity(''); setCapacityUnit('kg');
+    setOdometer(''); setAcqCost(''); setStatus('Available'); setRegion('North');
     setIsModalOpen(true);
   };
 
   const openEditModal = (vehicle) => {
-    if (!isManager) return;
     setModalMode('edit');
     setValidationError('');
     setEditingRegNo(vehicle.regNo);
-    setRegNo(vehicle.regNo);
-    setName(vehicle.name);
-    setType(vehicle.type);
-    setCapacity(vehicle.capacity);
-    setCapacityUnit(vehicle.capacityUnit);
-    setOdometer(vehicle.odometer);
-    setAcqCost(vehicle.acqCost);
-    setStatus(vehicle.status);
+    setRegNo(vehicle.regNo); setName(vehicle.name); setType(vehicle.type);
+    setCapacity(vehicle.capacity); setCapacityUnit(vehicle.capacityUnit);
+    setOdometer(vehicle.odometer); setAcqCost(vehicle.acqCost); setStatus(vehicle.status);
     setRegion(vehicle.region || 'North');
     setIsModalOpen(true);
   };
 
   const handleDelete = (regToDelete) => {
-    if (!isManager) return;
-    if (window.confirm(`Are you sure you want to delete vehicle ${regToDelete}?`)) {
+    if (window.confirm("Are you sure you want to delete vehicle?")) {
       setVehicles(vehicles.filter((v) => v.regNo !== regToDelete));
     }
   };
@@ -80,351 +63,268 @@ export default function VehicleRegistry({ vehicles, setVehicles, currentUser }) 
     e.preventDefault();
     setValidationError('');
 
-    // Check unique Reg No
     if (modalMode === 'add') {
-      const exists = vehicles.some((v) => v.regNo.toLowerCase() === regNo.trim().toLowerCase());
-      if (exists) {
-        setValidationError(`Registration Number "${regNo}" must be unique.`);
+      if (vehicles.some((v) => v.regNo.toLowerCase() === regNo.trim().toLowerCase())) {
+        setValidationError(`Registration Number "${regNo.trim()}" must be unique.`);
         return;
       }
-    } else if (modalMode === 'edit') {
-      const exists = vehicles.some(
-        (v) => v.regNo.toLowerCase() === regNo.trim().toLowerCase() && v.regNo !== editingRegNo
-      );
-      if (exists) {
-        setValidationError(`Registration Number "${regNo}" must be unique.`);
+    } else {
+      if (vehicles.some((v) => v.regNo.toLowerCase() === regNo.trim().toLowerCase() && v.regNo !== editingRegNo)) {
+        setValidationError(`Registration Number "${regNo.trim()}" must be unique.`);
         return;
       }
     }
 
     const vehicleData = {
-      regNo: regNo.trim().toUpperCase(),
-      name: name.trim(),
-      type,
-      capacity: Number(capacity),
-      capacityUnit,
-      odometer: Number(odometer),
-      acqCost: Number(acqCost),
-      status,
-      region
+      regNo: regNo.trim().toUpperCase(), name: name.trim(), type,
+      capacity: Number(capacity), capacityUnit, odometer: Number(odometer),
+      acqCost: Number(acqCost), status, region
     };
 
-    if (modalMode === 'add') {
-      setVehicles([...vehicles, vehicleData]);
-    } else {
-      setVehicles(vehicles.map((v) => (v.regNo === editingRegNo ? vehicleData : v)));
-    }
+    if (modalMode === 'add') setVehicles([...vehicles, vehicleData]);
+    else setVehicles(vehicles.map((v) => (v.regNo === editingRegNo ? vehicleData : v)));
 
     setIsModalOpen(false);
   };
 
-  // Helper to format currency
-  const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(val);
-  };
+  const formatCurrency = (val) => new Intl.NumberFormat('en-IN').format(val);
+  const formatNumber = (val) => new Intl.NumberFormat('en-IN').format(val);
 
-  // Helper to format number
-  const formatNumber = (val) => {
-    return new Intl.NumberFormat('en-IN').format(val);
-  };
+  const initials = currentUser?.name 
+    ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()
+    : 'RK';
+  const userName = currentUser?.name || 'Raven K.';
+  const userRole = currentUser?.role || 'Dispatcher';
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Vehicle Registry</h1>
-          <p className="page-subtitle">Manage company fleet inventory and specifications</p>
+    <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
+      
+      {/* Top Bar matching wireframe */}
+      <div className="flex items-center justify-between px-8 py-3 border-b border-border/50 bg-card">
+        <div className="relative w-80">
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
+          />
         </div>
-        {isManager ? (
-          <button onClick={openAddModal} className="btn btn-primary">
-            <Plus size={18} />
-            <span>Add Vehicle</span>
-          </button>
-        ) : (
-          <div className="role-read-only-badge">
-            <ShieldAlert size={14} />
-            <span>Read-Only (Requires Fleet Manager)</span>
+        
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-secondary">{userName}</span>
+          <div className="flex items-center gap-2 pl-3 pr-1 py-1 border border-border/80 rounded-full shadow-sm bg-card">
+            <span className="text-xs font-semibold text-electric">{userRole}</span>
+            <div className="w-6 h-6 rounded-full bg-electric text-void flex items-center justify-center text-[10px] font-bold">
+              {initials}
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Search & Filter controls */}
-      <div className="filters-panel card">
-        <span className="filters-label">SEARCH & FILTER</span>
-        <div className="filters-row">
-          <div className="filter-item">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="form-control select-control"
-            >
-              <option value="All">Type: All</option>
-              <option value="Van">Van</option>
-              <option value="Truck">Truck</option>
-              <option value="Mini">Mini</option>
-            </select>
-          </div>
-          <div className="filter-item">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="form-control select-control"
-            >
-              <option value="All">Status: All</option>
-              <option value="Available">Available</option>
-              <option value="On Trip">On Trip</option>
-              <option value="In Shop">In Shop</option>
-              <option value="Retired">Retired</option>
-            </select>
-          </div>
-          <div className="filter-item flex-1">
-            <div className="input-with-icon" style={{ width: '100%' }}>
-              <Plus size={16} className="input-icon" style={{ transform: 'rotate(45deg)' }} />
-              <input
-                type="text"
-                placeholder="Search reg. no..."
+      <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        {/* Filters and Add Button */}
+        <div className="flex items-center justify-between">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="relative shadow-sm rounded-md">
+              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="text-sm bg-card border border-border/80 rounded-md px-4 py-1.5 text-primary outline-none focus:border-border appearance-none pr-8 min-w-[140px] cursor-pointer">
+                <option value="All">Type: All</option>
+                <option value="Van">Van</option>
+                <option value="Truck">Truck</option>
+                <option value="Mini">Mini</option>
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-xs">▼</div>
+            </div>
+            
+            <div className="relative shadow-sm rounded-md">
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="text-sm bg-card border border-border/80 rounded-md px-4 py-1.5 text-primary outline-none focus:border-border appearance-none pr-8 min-w-[140px] cursor-pointer">
+                <option value="All">Status: All</option>
+                <option value="Available">Available</option>
+                <option value="On Trip">On Trip</option>
+                <option value="In Shop">In Shop</option>
+                <option value="Retired">Retired</option>
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-xs">▼</div>
+            </div>
+
+            <div className="relative shadow-sm rounded-md w-64">
+              <input 
+                type="text" 
+                placeholder="Search reg. no..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="form-control"
-                style={{ width: '100%', minWidth: '240px' }}
+                className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary"
               />
             </div>
           </div>
+          
+          <button onClick={openAddModal} className="flex items-center gap-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
+            <span>+</span> Add Vehicle
+          </button>
         </div>
-      </div>
 
-      {/* Main Table */}
-      <div className="card">
-        <div className="table-responsive">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>REG. NO. (UNIQUE)</th>
-                <th>NAME/MODEL</th>
-                <th>TYPE</th>
-                <th>CAPACITY</th>
-                <th>ODOMETER</th>
-                <th>ACQ. COST</th>
-                <th>STATUS</th>
-                {isManager && <th style={{ textAlign: 'right' }}>ACTIONS</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredVehicles.length === 0 ? (
+        {/* Main Table Container */}
+        <div className="bg-card border border-border/80 rounded-md shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
                 <tr>
-                  <td colSpan={isManager ? 8 : 7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    No vehicles found matching filters.
-                  </td>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Reg. No. (Unique)</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Name/Model</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Type</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Capacity</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Odometer</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Acq. Cost</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Status</th>
                 </tr>
-              ) : (
-                filteredVehicles.map((vehicle) => (
-                  <tr key={vehicle.regNo}>
-                    <td style={{ fontWeight: 600, letterSpacing: '0.5px' }}>{vehicle.regNo}</td>
-                    <td>{vehicle.name}</td>
-                    <td>{vehicle.type}</td>
-                    <td>{formatNumber(vehicle.capacity)} {vehicle.capacityUnit}</td>
-                    <td>{formatNumber(vehicle.odometer)} km</td>
-                    <td>{formatCurrency(vehicle.acqCost)}</td>
-                    <td>
-                      <span className={`badge badge-${vehicle.status.replace(/\s+/g, '').toLowerCase()}`}>
-                        {vehicle.status}
-                      </span>
-                    </td>
-                    {isManager && (
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                          <button
-                            onClick={() => openEditModal(vehicle)}
-                            className="btn btn-secondary btn-sm"
-                            title="Edit Vehicle"
-                          >
-                            <Edit2 size={12} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(vehicle.regNo)}
-                            className="btn btn-danger btn-sm"
-                            title="Delete Vehicle"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {filteredVehicles.map((vehicle) => {
+                  let statusClass = "bg-border text-primary";
+                  if (vehicle.status === "Available") statusClass = "bg-green-500 text-white";
+                  else if (vehicle.status === "On Trip" || vehicle.status === "On Mission") statusClass = "bg-blue-500 text-white";
+                  else if (vehicle.status === "In Shop" || vehicle.status === "In Maintenance") statusClass = "bg-orange-500 text-white";
+                  else if (vehicle.status === "Retired") statusClass = "bg-red-500 text-white";
+
+                  return (
+                    <tr key={vehicle.regNo} className="hover:bg-secondary/5 transition-colors cursor-pointer" onClick={() => openEditModal(vehicle)}>
+                      <td className="py-4 px-6 text-sm font-medium">{vehicle.regNo}</td>
+                      <td className="py-4 px-6 text-sm">{vehicle.name}</td>
+                      <td className="py-4 px-6 text-sm">{vehicle.type}</td>
+                      <td className="py-4 px-6 text-sm">{formatNumber(vehicle.capacity)} {vehicle.capacityUnit}</td>
+                      <td className="py-4 px-6 text-sm">{formatNumber(vehicle.odometer)}</td>
+                      <td className="py-4 px-6 text-sm">{formatCurrency(vehicle.acqCost)}</td>
+                      <td className="py-4 px-6">
+                        <span className={`px-4 py-1.5 rounded-md text-xs font-medium ${statusClass}`}>
+                          {vehicle.status}
+                        </span>
                       </td>
-                    )}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
         
-        <div className="table-rules-footer">
-          <p>Rule: Registration No. must be unique • Retired/In Shop vehicles are hidden from Trip Dispatcher</p>
+        {/* Rule Footer */}
+        <div className="pt-2">
+          <p className="text-xs font-semibold text-orange-500">
+            Rule: Registration No. must be unique • Retired/In Shop vehicles are hidden from Trip Dispatcher
+          </p>
         </div>
       </div>
 
-      {/* Modal Dialog */}
-      {isModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h3>{modalMode === 'add' ? 'Add New Vehicle' : 'Edit Vehicle Details'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="modal-close-btn">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body">
-                {validationError && (
-                  <div className="validation-alert" style={{ marginBottom: '1.25rem' }}>
-                    <ShieldAlert size={16} />
-                    <span>{validationError}</span>
-                  </div>
-                )}
+      {/* Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-void/80 backdrop-blur-sm" 
+              onClick={() => setIsModalOpen(false)} 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-card border border-border shadow-2xl rounded-md overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-border/50 bg-card">
+                <h3 className="text-lg font-bold text-primary">{modalMode === 'add' ? 'Add New Vehicle' : 'Edit Vehicle'}</h3>
+                <button onClick={() => setIsModalOpen(false)} className="p-2 text-muted hover:text-primary transition-colors bg-secondary/30 rounded-md border border-border">
+                  <X size={16} />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto flex-1">
+                <form id="vehicle-form" onSubmit={handleSubmit} className="space-y-6">
+                  {validationError && (
+                    <div className="p-4 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 flex gap-3 text-sm items-start">
+                      <ShieldAlert size={18} className="shrink-0 mt-0.5" />
+                      <p>{validationError}</p>
+                    </div>
+                  )}
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">REGISTRATION NUMBER (UNIQUE)</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={regNo}
-                      onChange={(e) => setRegNo(e.target.value)}
-                      placeholder="e.g. GJ01AB4521"
-                      required
-                      disabled={modalMode === 'edit'} // Don't let change PK during edit
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label className="form-label">NAME/MODEL</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. VAN-05"
-                      required
-                    />
-                  </div>
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Registration Number</label>
+                      <input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50" value={regNo} onChange={(e) => setRegNo(e.target.value)} required disabled={modalMode === 'edit'} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Name/Model</label>
+                      <input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={name} onChange={(e) => setName(e.target.value)} required />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Vehicle Type</label>
+                      <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={type} onChange={(e) => setType(e.target.value)}>
+                        <option value="Van">Van</option>
+                        <option value="Truck">Truck</option>
+                        <option value="Mini">Mini</option>
+                      </select>
+                    </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">VEHICLE TYPE</label>
-                    <select
-                      className="form-control select-control"
-                      value={type}
-                      onChange={(e) => setType(e.target.value)}
-                    >
-                      <option value="Van">Van</option>
-                      <option value="Truck">Truck</option>
-                      <option value="Mini">Mini</option>
-                    </select>
-                  </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Load Capacity</label>
+                      <div className="flex gap-2">
+                        <input type="number" className="flex-1 px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={capacity} onChange={(e) => setCapacity(e.target.value)} min="1" required />
+                        <select className="w-24 px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={capacityUnit} onChange={(e) => setCapacityUnit(e.target.value)}>
+                          <option value="kg">kg</option>
+                          <option value="Ton">Ton</option>
+                        </select>
+                      </div>
+                    </div>
 
-                  <div className="form-group">
-                    <label className="form-label">LOAD CAPACITY</label>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={capacity}
-                        onChange={(e) => setCapacity(e.target.value)}
-                        placeholder="e.g. 500"
-                        min="1"
-                        required
-                        style={{ flex: 2 }}
-                      />
-                      <select
-                        className="form-control select-control"
-                        value={capacityUnit}
-                        onChange={(e) => setCapacityUnit(e.target.value)}
-                        style={{ flex: 1 }}
-                      >
-                        <option value="kg">kg</option>
-                        <option value="Ton">Ton</option>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Odometer (KM)</label>
+                      <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={odometer} onChange={(e) => setOdometer(e.target.value)} min="0" required />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Acquisition Cost (INR)</label>
+                      <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={acqCost} onChange={(e) => setAcqCost(e.target.value)} min="0" required />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Status</label>
+                      <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50 appearance-none cursor-pointer" value={status} onChange={(e) => setStatus(e.target.value)}>
+                        <option value="Available">Available</option>
+                        <option value="On Trip">On Trip</option>
+                        <option value="In Shop">In Shop</option>
+                        <option value="Retired">Retired</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Operational Region</label>
+                      <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={region} onChange={(e) => setRegion(e.target.value)}>
+                        <option value="North">North</option>
+                        <option value="East">East</option>
+                        <option value="West">West</option>
+                        <option value="South">South</option>
                       </select>
                     </div>
                   </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">ODOMETER (KM)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={odometer}
-                      onChange={(e) => setOdometer(e.target.value)}
-                      placeholder="e.g. 74000"
-                      min="0"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">ACQUISITION COST (INR)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={acqCost}
-                      onChange={(e) => setAcqCost(e.target.value)}
-                      placeholder="e.g. 620000"
-                      min="0"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">STATUS</label>
-                    <select
-                      className="form-control select-control"
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      disabled={modalMode === 'add'} // Status defaults to Available on addition
-                    >
-                      <option value="Available">Available</option>
-                      <option value="On Trip">On Trip</option>
-                      <option value="In Shop">In Shop</option>
-                      <option value="Retired">Retired</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">OPERATIONAL REGION</label>
-                    <select
-                      className="form-control select-control"
-                      value={region}
-                      onChange={(e) => setRegion(e.target.value)}
-                    >
-                      <option value="North">North</option>
-                      <option value="East">East</option>
-                      <option value="West">West</option>
-                      <option value="South">South</option>
-                    </select>
-                  </div>
-                </div>
+                  
+                  {modalMode === 'edit' && (
+                    <div className="pt-4 flex justify-between border-t border-border/50">
+                      <button type="button" onClick={() => { handleDelete(regNo); setIsModalOpen(false); }} className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-md text-sm font-semibold transition-colors flex items-center gap-2">
+                        <Trash2 size={16} /> Delete Vehicle
+                      </button>
+                    </div>
+                  )}
+                </form>
               </div>
-              
-              <div className="modal-footer">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">
+
+              <div className="p-6 border-t border-border/50 bg-card flex justify-end gap-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 bg-secondary/10 hover:bg-secondary/20 text-primary rounded-md text-sm font-semibold transition-colors">
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" form="vehicle-form" className="px-8 py-2 bg-primary text-secondary rounded-md text-sm font-semibold transition-colors">
                   {modalMode === 'add' ? 'Add Vehicle' : 'Save Changes'}
                 </button>
               </div>
-            </form>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,105 +1,151 @@
 import React, { useState } from 'react';
 import { 
-  LayoutDashboard, 
-  Truck, 
-  Users, 
-  Navigation, 
-  Wrench, 
-  Coins, 
-  BarChart3, 
-  Settings, 
-  LogOut,
-  Moon,
-  Sun,
-  ChevronLeft,
-  ChevronRight
+  LayoutDashboard, Truck, Users, Navigation, Wrench, 
+  Coins, BarChart3, Settings, LogOut, Moon, Sun, 
+  ChevronLeft, ChevronRight, Lock
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export default function Sidebar({ activePage, setActivePage, currentUser, onLogout, theme, setTheme }) {
+export default function Sidebar({ activePage, setActivePage, currentUser, onLogout, theme, setTheme, isPageRestricted }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const menuItems = [
-    { id: 1, name: 'Dashboard', icon: LayoutDashboard, roles: ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst'] },
-    { id: 2, name: 'Fleet', icon: Truck, roles: ['Fleet Manager', 'Dispatcher', 'Financial Analyst'] },
-    { id: 3, name: 'Drivers', icon: Users, roles: ['Fleet Manager', 'Safety Officer'] },
-    { id: 4, name: 'Trips', icon: Navigation, roles: ['Fleet Manager', 'Dispatcher'] },
-    { id: 5, name: 'Maintenance', icon: Wrench, roles: ['Fleet Manager', 'Dispatcher'] },
-    { id: 6, name: 'Fuel & Expenses', icon: Coins, roles: ['Fleet Manager', 'Financial Analyst'] },
-    { id: 7, name: 'Analytics', icon: BarChart3, roles: ['Fleet Manager', 'Financial Analyst', 'Safety Officer', 'Dispatcher'] },
-    { id: 8, name: 'Settings', icon: Settings, roles: ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst'] }
+    { id: 1, name: 'Overview', icon: LayoutDashboard },
+    { id: 2, name: 'Fleet Registry', icon: Truck },
+    { id: 3, name: 'Drivers', icon: Users },
+    { id: 4, name: 'Dispatch & Trips', icon: Navigation },
+    { id: 5, name: 'Maintenance', icon: Wrench },
+    { id: 6, name: 'Fuel & Expenses', icon: Coins },
+    { id: 7, name: 'Analytics', icon: BarChart3 },
+    { id: 8, name: 'Settings', icon: Settings }
   ];
-
-  // Helper to check if role has access to specific menu item
-  const hasAccess = (itemRoles) => {
-    return currentUser ? itemRoles.includes(currentUser.role) : false;
-  };
 
   const handleThemeToggle = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  const sidebarVariants = {
+    expanded: { width: 280, transition: { type: 'spring', stiffness: 300, damping: 30 } },
+    collapsed: { width: 80, transition: { type: 'spring', stiffness: 300, damping: 30 } }
+  };
+
   return (
-    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* Sidebar Collapse Toggle Button */}
+    <motion.aside 
+      initial={false}
+      animate={isCollapsed ? 'collapsed' : 'expanded'}
+      variants={sidebarVariants}
+      className="h-full bg-secondary border-r border-border flex flex-col relative z-20 overflow-hidden shrink-0"
+    >
+      {/* Collapse Toggle */}
       <button 
-        onClick={() => setIsCollapsed(!isCollapsed)} 
-        className="sidebar-collapse-toggle"
-        title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        aria-label="Toggle Sidebar"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-secondary border border-border flex items-center justify-center text-secondary-foreground shadow-sm hover:text-primary hover:border-electric transition-colors z-50"
       >
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
 
-      <div className="sidebar-brand">
-        <div className="brand-logo">
-          <Truck size={28} className="logo-icon" />
+      {/* Brand */}
+      <div className="p-6 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric to-neon flex items-center justify-center shrink-0 shadow-lg shadow-electric/20">
+          <Truck size={20} className="text-void" />
         </div>
-        <div className="brand-info">
-          <h1>TransitOps</h1>
-          <p>Smart Fleet Operations</p>
-        </div>
+        <AnimatePresence>
+          {!isCollapsed && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: -10 }} 
+              className="whitespace-nowrap"
+            >
+              <h1 className="font-heading font-bold text-lg leading-tight tracking-tight">TransitOps</h1>
+              <p className="text-[10px] text-muted font-semibold uppercase tracking-wider">Command Center</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <nav className="sidebar-nav">
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const allowed = hasAccess(item.roles);
+          const restricted = isPageRestricted(item.id);
+          const active = activePage === item.id;
+          
           return (
             <button
               key={item.id}
               onClick={() => setActivePage(item.id)}
-              className={`nav-item ${activePage === item.id ? 'active' : ''} ${!allowed ? 'restricted-item' : ''}`}
-              title={!allowed ? `Restricted to: ${item.roles.join(', ')}` : ''}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group relative overflow-hidden ${active ? 'text-primary' : 'text-secondary hover:bg-primary/40 hover:text-primary'}`}
             >
-              <Icon size={20} />
-              <span>{item.name}</span>
-              {!allowed && <span className="restricted-badge">Locked</span>}
+              {active && (
+                <motion.div layoutId="activeNavIndicator" className="absolute inset-0 bg-electric/10 rounded-lg" />
+              )}
+              {active && (
+                <motion.div layoutId="activeNavBorder" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-electric rounded-r-full" />
+              )}
+              
+              <div className="relative z-10 shrink-0 w-6 flex justify-center">
+                <Icon size={18} className={active ? 'text-electric' : 'text-muted group-hover:text-current'} />
+              </div>
+
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <motion.div 
+                    initial={{ opacity: 0, width: 0 }} 
+                    animate={{ opacity: 1, width: 'auto' }} 
+                    exit={{ opacity: 0, width: 0 }}
+                    className="relative z-10 flex-1 text-left flex justify-between items-center whitespace-nowrap"
+                  >
+                    <span>{item.name}</span>
+                    {restricted && <Lock size={12} className="text-red-500/70 shrink-0" />}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </button>
           );
         })}
-      </nav>
-
-      <div className="sidebar-footer">
-        <div className="theme-toggle-container">
-          <button onClick={handleThemeToggle} className="theme-toggle-btn-sidebar" title="Toggle Theme">
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-          </button>
-        </div>
-        
-        <div className="sidebar-user">
-          <div className="avatar-sm">
-            {currentUser?.name?.substring(0, 2) || 'US'}
-          </div>
-          <div className="user-details">
-            <div className="user-name-sidebar">{currentUser?.name || 'User'}</div>
-            <div className="user-role-sidebar">{currentUser?.role || 'Guest'}</div>
-          </div>
-          <button onClick={onLogout} className="logout-btn" title="Sign Out">
-            <LogOut size={16} />
-          </button>
-        </div>
       </div>
-    </aside>
+
+      {/* Footer (Theme & User) */}
+      <div className="p-4 border-t border-border/50 bg-secondary/50 space-y-2">
+        <button 
+          onClick={handleThemeToggle}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-secondary hover:text-primary hover:bg-primary/50 transition-colors"
+        >
+          {theme === 'dark' ? <Sun size={18} className="shrink-0" /> : <Moon size={18} className="shrink-0" />}
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="whitespace-nowrap">
+                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+
+        <div className="flex items-center gap-3 px-2 py-2 mt-2 rounded-lg bg-primary/30 border border-border/30">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-accent to-accent-hover text-white flex items-center justify-center font-bold text-xs shrink-0">
+            {currentUser?.name?.substring(0, 2).toUpperCase() || 'US'}
+          </div>
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex-1 overflow-hidden whitespace-nowrap">
+                <div className="text-xs font-semibold text-primary truncate">{currentUser?.name || 'User'}</div>
+                <div className="text-[10px] font-medium text-muted truncate">{currentUser?.role || 'Guest'}</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {!isCollapsed && (
+            <button onClick={onLogout} className="p-1.5 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors shrink-0">
+              <LogOut size={16} />
+            </button>
+          )}
+        </div>
+        {isCollapsed && (
+           <button onClick={onLogout} className="w-full flex justify-center p-2 mt-1 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors">
+              <LogOut size={16} />
+           </button>
+        )}
+      </div>
+    </motion.aside>
   );
 }

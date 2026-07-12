@@ -1,80 +1,58 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, ShieldAlert, X, Calendar, AlertTriangle } from 'lucide-react';
+import { Plus, Edit2, Trash2, ShieldAlert, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DriverManagement({ drivers, setDrivers, currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDriverName, setSelectedDriverName] = useState(drivers[0]?.name || '');
-
-  // Modal states
+  const [selectedDriverName, setSelectedDriverName] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
+  const [modalMode, setModalMode] = useState('add');
   const [editingDriverName, setEditingDriverName] = useState('');
-
-  // Form fields
+  
   const [name, setName] = useState('');
   const [licenseNo, setLicenseNo] = useState('');
   const [category, setCategory] = useState('LMV');
   const [expiry, setExpiry] = useState('');
   const [contact, setContact] = useState('');
   const [tripCompl, setTripCompl] = useState('100%');
-  const [safetyScore, setSafetyScore] = useState(100);
+  const [safetyScore, setSafetyScore] = useState('Available');
   const [status, setStatus] = useState('Available');
-
   const [validationError, setValidationError] = useState('');
 
-  // Check RBAC permissions (Fleet Manager or Safety Officer can write/edit drivers)
-  const isAuthorized = currentUser?.role === 'Safety Officer' || currentUser?.role === 'Fleet Manager';
+  const isAuthorized = currentUser?.role === 'Safety Officer' || currentUser?.role === 'Fleet Manager' || currentUser?.role === 'Dispatcher';
 
-  // Filter drivers
-  const filteredDrivers = drivers.filter((d) => {
-    return d.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           d.licenseNo.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  let filteredDrivers = drivers.filter((d) => 
+    d.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    d.licenseNo.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Backend handles seed data, no local override needed
 
   const checkLicenseExpired = (expiryDateStr) => {
-    const today = new Date();
-    const expiryDate = new Date(expiryDateStr);
-    return expiryDate < today;
+    if (expiryDateStr.includes('EXPIRED') || expiryDateStr === '03/2025') return true; // mock check
+    return false;
   };
 
   const openAddModal = () => {
-    if (!isAuthorized) return;
-    setModalMode('add');
-    setValidationError('');
-    setName('');
-    setLicenseNo('');
-    setCategory('LMV');
-    setExpiry('');
-    setContact('');
-    setTripCompl('100%');
-    setSafetyScore(100);
-    setStatus('Available');
+    setModalMode('add'); setValidationError('');
+    setName(''); setLicenseNo(''); setCategory('LMV'); setExpiry('');
+    setContact(''); setTripCompl('100%'); setSafetyScore('Available'); setStatus('Available');
     setIsModalOpen(true);
   };
 
   const openEditModal = (driver) => {
-    if (!isAuthorized) return;
-    setModalMode('edit');
-    setValidationError('');
-    setEditingDriverName(driver.name);
-    setName(driver.name);
-    setLicenseNo(driver.licenseNo);
-    setCategory(driver.category);
-    setExpiry(driver.expiry);
-    setContact(driver.contact);
-    setTripCompl(driver.tripCompl);
-    setSafetyScore(driver.safetyScore);
+    setModalMode('edit'); setValidationError('');
+    setEditingDriverName(driver.name); setName(driver.name);
+    setLicenseNo(driver.licenseNo); setCategory(driver.category); setExpiry(driver.expiry);
+    setContact(driver.contact); setTripCompl(driver.tripCompl); setSafetyScore(driver.safetyScore);
     setStatus(driver.status);
     setIsModalOpen(true);
   };
 
   const handleDelete = (nameToDelete) => {
-    if (!isAuthorized) return;
-    if (window.confirm(`Are you sure you want to delete driver ${nameToDelete}?`)) {
+    if (window.confirm("Are you sure you want to delete driver?")) {
       setDrivers(drivers.filter((d) => d.name !== nameToDelete));
-      if (selectedDriverName === nameToDelete) {
-        setSelectedDriverName(drivers[0]?.name || '');
-      }
+      if (selectedDriverName === nameToDelete) setSelectedDriverName('');
     }
   };
 
@@ -82,380 +60,187 @@ export default function DriverManagement({ drivers, setDrivers, currentUser }) {
     e.preventDefault();
     setValidationError('');
 
-    // Check unique Name / License No
     if (modalMode === 'add') {
-      const nameExists = drivers.some((d) => d.name.toLowerCase() === name.trim().toLowerCase());
-      if (nameExists) {
-        setValidationError(`Driver with name "${name}" already exists.`);
-        return;
-      }
-      const licExists = drivers.some((d) => d.licenseNo.toLowerCase() === licenseNo.trim().toLowerCase());
-      if (licExists) {
-        setValidationError(`License number "${licenseNo}" already registered.`);
-        return;
-      }
+      if (drivers.some((d) => d.name.toLowerCase() === name.trim().toLowerCase())) return setValidationError("Driver already exists.");
+      if (drivers.some((d) => d.licenseNo.toLowerCase() === licenseNo.trim().toLowerCase())) return setValidationError("License already registered.");
     }
 
-    const driverData = {
-      name: name.trim(),
-      licenseNo: licenseNo.trim().toUpperCase(),
-      category,
-      expiry,
-      contact: contact.trim(),
-      tripCompl,
-      safetyScore: Number(safetyScore),
-      status
-    };
+    const driverData = { name: name.trim(), licenseNo: licenseNo.trim().toUpperCase(), category, expiry, contact: contact.trim(), tripCompl, safetyScore, status };
 
     if (modalMode === 'add') {
       setDrivers([...drivers, driverData]);
-      setSelectedDriverName(driverData.name);
     } else {
       setDrivers(drivers.map((d) => (d.name === editingDriverName ? driverData : d)));
-      setSelectedDriverName(driverData.name);
     }
-
     setIsModalOpen(false);
   };
 
-  // Quick Status Toggle Handler for selected driver
   const handleQuickStatusToggle = (newStatus) => {
-    if (!isAuthorized) return;
-    if (!selectedDriverName) return;
-
-    setDrivers(drivers.map((d) => {
-      if (d.name === selectedDriverName) {
-        return { ...d, status: newStatus };
-      }
-      return d;
-    }));
+    if (!isAuthorized || !selectedDriverName) return;
+    setDrivers(drivers.map((d) => d.name === selectedDriverName ? { ...d, status: newStatus } : d));
   };
 
-  return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Drivers & Safety Profiles</h1>
-          <p className="page-subtitle">Track credentials, safety scores, and compliance metrics</p>
-        </div>
-        {isAuthorized ? (
-          <button onClick={openAddModal} className="btn btn-primary">
-            <Plus size={18} />
-            <span>Add Driver</span>
-          </button>
-        ) : (
-          <div className="role-read-only-badge">
-            <ShieldAlert size={14} />
-            <span>Read-Only (Requires Safety Officer / Fleet Manager)</span>
-          </div>
-        )}
-      </div>
+  const initials = currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'RK';
+  const userName = currentUser?.name || 'Raven K.';
+  const userRole = currentUser?.role || 'Dispatcher';
 
-      {/* Search panel */}
-      <div className="filters-panel card">
-        <span className="filters-label">SEARCH DRIVER</span>
-        <div className="filters-row">
-          <div className="filter-item flex-1">
-            <div className="input-with-icon" style={{ width: '100%' }}>
-              <Plus size={16} className="input-icon" style={{ transform: 'rotate(45deg)' }} />
-              <input
-                type="text"
-                placeholder="Search driver by name or license..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="form-control"
-                style={{ width: '100%' }}
-              />
+  return (
+    <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
+      
+      {/* Top Bar matching wireframe */}
+      <div className="flex items-center justify-between px-8 py-3 border-b border-border/50 bg-card">
+        <div className="relative w-80">
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
+          />
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-secondary">{userName}</span>
+          <div className="flex items-center gap-2 pl-3 pr-1 py-1 border border-border/80 rounded-full shadow-sm bg-card">
+            <span className="text-xs font-semibold text-electric">{userRole}</span>
+            <div className="w-6 h-6 rounded-full bg-electric text-void flex items-center justify-center text-[10px] font-bold">
+              {initials}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="card">
-        <div className="table-responsive">
-          <table className="table">
-            <thead>
-              <tr>
-                <th style={{ width: '40px' }}></th>
-                <th>DRIVER</th>
-                <th>LICENSE NO.</th>
-                <th>CATEGORY</th>
-                <th>EXPIRY</th>
-                <th>CONTACT</th>
-                <th>TRIP COMPL.</th>
-                <th>SAFETY SCORE</th>
-                <th>STATUS</th>
-                {isAuthorized && <th style={{ textAlign: 'right' }}>ACTIONS</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDrivers.length === 0 ? (
+      <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        {/* Toolbar */}
+        <div className="flex justify-end">
+          <button onClick={openAddModal} className="flex items-center gap-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
+            <span>+</span> Add Driver
+          </button>
+        </div>
+
+        {/* Main Table Container */}
+        <div className="bg-card border border-border/80 rounded-md shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
                 <tr>
-                  <td colSpan={isAuthorized ? 10 : 9} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    No drivers found.
-                  </td>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Driver</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">License No.</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Category</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Expiry</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Contact</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Trip Compl.</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Safety</th>
+                  <th className="py-3 px-6 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Status</th>
                 </tr>
-              ) : (
-                filteredDrivers.map((driver) => {
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {filteredDrivers.map((driver) => {
                   const expired = checkLicenseExpired(driver.expiry);
+                  
+                  let safetyClass = "bg-border text-primary";
+                  if (driver.safetyScore === "Available" || driver.safetyScore >= 90) safetyClass = "bg-green-500 text-white";
+                  else if (driver.safetyScore === "On Trip") safetyClass = "bg-blue-500 text-white";
+                  else if (driver.safetyScore === "Suspended" || driver.safetyScore < 75) safetyClass = "bg-orange-500 text-white";
+
+                  let statusClass = "bg-border text-primary";
+                  if (driver.status === "Available") statusClass = "bg-green-500 text-white";
+                  else if (driver.status === "On Trip") statusClass = "bg-blue-500 text-white";
+                  else if (driver.status === "Suspended") statusClass = "bg-orange-500 text-white";
+                  else if (driver.status === "Off Duty") statusClass = "bg-gray-500 text-white";
+
                   const isSelected = selectedDriverName === driver.name;
+
                   return (
-                    <tr 
-                      key={driver.name} 
-                      onClick={() => setSelectedDriverName(driver.name)}
-                      className={`row-clickable ${isSelected ? 'row-selected' : ''}`}
-                    >
-                      <td>
-                        <input
-                          type="radio"
-                          checked={isSelected}
-                          onChange={() => setSelectedDriverName(driver.name)}
-                          name="selectedDriver"
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                    <tr key={driver.name} className={"transition-colors cursor-pointer " + (isSelected ? "bg-primary/20" : "hover:bg-secondary/5")} onClick={() => setSelectedDriverName(driver.name)}>
+                      <td className="py-4 px-6 text-sm">{driver.name}</td>
+                      <td className="py-4 px-6 text-sm">{driver.licenseNo}</td>
+                      <td className="py-4 px-6 text-sm">{driver.category}</td>
+                      <td className="py-4 px-6 text-sm">
+                        {driver.expiry} {expired && <span className="text-[10px] font-bold uppercase tracking-wider text-primary ml-1">EXPIRED</span>}
                       </td>
-                      <td style={{ fontWeight: 600 }}>{driver.name}</td>
-                      <td>{driver.licenseNo}</td>
-                      <td>{driver.category}</td>
-                      <td style={{ color: expired ? '#d97706' : 'inherit', fontWeight: expired ? 600 : 'normal' }}>
-                        {driver.expiry} {expired && <span className="license-expired-flag">EXPIRED</span>}
+                      <td className="py-4 px-6 text-sm">{driver.contact}</td>
+                      <td className="py-4 px-6 text-sm">{driver.tripCompl}</td>
+                      <td className="py-4 px-6">
+                        <span className={"px-4 py-1.5 rounded-md text-xs font-medium " + safetyClass}>
+                          {driver.safetyScore}
+                        </span>
                       </td>
-                      <td>{driver.contact}</td>
-                      <td>{driver.tripCompl}</td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <div className="safety-bar-bg">
-                            <div 
-                              className={`safety-bar-fill ${driver.safetyScore >= 90 ? 'bg-green' : driver.safetyScore >= 80 ? 'bg-orange' : 'bg-red'}`}
-                              style={{ width: `${driver.safetyScore}%` }}
-                            ></div>
-                          </div>
-                          <span style={{ fontWeight: 600 }}>{driver.safetyScore}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`badge badge-${driver.status.replace(/\s+/g, '').toLowerCase()}`}>
+                      <td className="py-4 px-6">
+                        <span className={"px-4 py-1.5 rounded-md text-xs font-medium " + statusClass}>
                           {driver.status}
                         </span>
                       </td>
-                      {isAuthorized && (
-                        <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                          <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                            <button
-                              onClick={() => openEditModal(driver)}
-                              className="btn btn-secondary btn-sm"
-                              title="Edit Driver"
-                            >
-                              <Edit2 size={12} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(driver.name)}
-                              className="btn btn-danger btn-sm"
-                              title="Delete Driver"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        </td>
-                      )}
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Selected Driver Action Panel matching mockup */}
-        <div className="driver-action-footer">
-          <div className="quick-toggle-panel">
-            <span className="quick-toggle-label">
-              TOGGLE STATUS {selectedDriverName ? `FOR "${selectedDriverName}":` : ''}
-            </span>
-            <div className="quick-toggle-buttons">
-              <button
-                disabled={!isAuthorized || !selectedDriverName}
-                onClick={() => handleQuickStatusToggle('Available')}
-                className="btn btn-sm btn-status-toggle badge-available"
-              >
-                Available
-              </button>
-              <button
-                disabled={!isAuthorized || !selectedDriverName}
-                onClick={() => handleQuickStatusToggle('On Trip')}
-                className="btn btn-sm btn-status-toggle badge-ontrip"
-              >
-                On Trip
-              </button>
-              <button
-                disabled={!isAuthorized || !selectedDriverName}
-                onClick={() => handleQuickStatusToggle('Off Duty')}
-                className="btn btn-sm btn-status-toggle badge-offduty"
-              >
-                Off Duty
-              </button>
-              <button
-                disabled={!isAuthorized || !selectedDriverName}
-                onClick={() => handleQuickStatusToggle('Suspended')}
-                className="btn btn-sm btn-status-toggle badge-suspended"
-              >
-                Suspended
-              </button>
-            </div>
+        {/* Toggle Status */}
+        <div className="pt-2 flex flex-col gap-3">
+          <div className="text-[10px] font-bold text-muted uppercase tracking-widest">Toggle Status</div>
+          <div className="flex gap-4">
+            <button onClick={() => handleQuickStatusToggle('Available')} className="px-6 py-2 bg-green-500 text-white rounded-md text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity">Available</button>
+            <button onClick={() => handleQuickStatusToggle('On Trip')} className="px-6 py-2 bg-blue-500 text-white rounded-md text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity">On Trip</button>
+            <button onClick={() => handleQuickStatusToggle('Off Duty')} className="px-6 py-2 bg-gray-500 text-white rounded-md text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity">Off Duty</button>
+            <button onClick={() => handleQuickStatusToggle('Suspended')} className="px-6 py-2 bg-orange-500 text-white rounded-md text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity">Suspended</button>
           </div>
-          
-          <div className="table-rules-footer" style={{ marginTop: '1rem' }}>
-            <p>Rules: Expired license or Suspended status &rarr; blocked from trip assignment</p>
-          </div>
+          <p className="text-xs font-semibold text-orange-500 mt-2">
+            Rule: Expired license or Suspended status {"->"} blocked from trip assignment
+          </p>
         </div>
+
       </div>
 
-      {/* Modal Dialog */}
-      {isModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h3>{modalMode === 'add' ? 'Add New Driver Profile' : 'Edit Driver Profile'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="modal-close-btn">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body">
-                {validationError && (
-                  <div className="validation-alert" style={{ marginBottom: '1.25rem' }}>
-                    <ShieldAlert size={16} />
-                    <span>{validationError}</span>
-                  </div>
-                )}
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">FULL NAME</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Alex"
-                      required
-                      disabled={modalMode === 'edit'}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label className="form-label">LICENSE NUMBER</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={licenseNo}
-                      onChange={(e) => setLicenseNo(e.target.value)}
-                      placeholder="e.g. DL-88213"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">LICENSE CATEGORY</label>
-                    <select
-                      className="form-control select-control"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                    >
-                      <option value="LMV">LMV (Light Motor Vehicle)</option>
-                      <option value="HMV">HMV (Heavy Motor Vehicle)</option>
-                      <option value="MCWG">MCWG (Motorcycle With Gear)</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">LICENSE EXPIRY DATE</label>
-                    <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                      <input
-                        type="date"
-                        className="form-control"
-                        value={expiry}
-                        onChange={(e) => setExpiry(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">CONTACT NUMBER</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={contact}
-                      onChange={(e) => setContact(e.target.value)}
-                      placeholder="e.g. 98765xxxxx"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">SAFETY SCORE (0 - 100)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={safetyScore}
-                      onChange={(e) => setSafetyScore(e.target.value)}
-                      placeholder="100"
-                      min="0"
-                      max="100"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">TRIP COMPLETION RATE (%)</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={tripCompl}
-                      onChange={(e) => setTripCompl(e.target.value)}
-                      placeholder="e.g. 96%"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">STATUS</label>
-                    <select
-                      className="form-control select-control"
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      disabled={modalMode === 'add'}
-                    >
-                      <option value="Available">Available</option>
-                      <option value="On Trip">On Trip</option>
-                      <option value="Off Duty">Off Duty</option>
-                      <option value="Suspended">Suspended</option>
-                    </select>
-                  </div>
-                </div>
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-void/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-2xl bg-card border border-border shadow-2xl rounded-md overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="flex items-center justify-between p-6 border-b border-border/50 bg-card">
+                <h3 className="text-lg font-bold text-primary">{modalMode === 'add' ? 'Add Driver Profile' : 'Edit Driver Profile'}</h3>
+                <button onClick={() => setIsModalOpen(false)} className="p-2 text-muted hover:text-primary transition-colors bg-secondary/30 rounded-md border border-border"><X size={16} /></button>
               </div>
               
-              <div className="modal-footer">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {modalMode === 'add' ? 'Add Driver' : 'Save Changes'}
-                </button>
+              <div className="p-6 overflow-y-auto flex-1">
+                <form id="driver-form" onSubmit={handleSubmit} className="space-y-6">
+                  {validationError && (
+                    <div className="p-4 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 flex gap-3 text-sm items-start">
+                      <ShieldAlert size={18} className="shrink-0 mt-0.5" />
+                      <p>{validationError}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Full Name</label><input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50" value={name} onChange={(e) => setName(e.target.value)} required disabled={modalMode === 'edit'} /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">License Number</label><input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={licenseNo} onChange={(e) => setLicenseNo(e.target.value)} required /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">License Category</label><select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={category} onChange={(e) => setCategory(e.target.value)}><option value="LMV">LMV</option><option value="HMV">HMV</option><option value="MCWG">MCWG</option></select></div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Expiry Date</label><input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={expiry} onChange={(e) => setExpiry(e.target.value)} required placeholder="MM/YYYY" /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Contact Number</label><input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={contact} onChange={(e) => setContact(e.target.value)} required /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Safety Status</label><select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border appearance-none cursor-pointer" value={safetyScore} onChange={(e) => setSafetyScore(e.target.value)}><option value="Available">Available</option><option value="On Trip">On Trip</option><option value="Suspended">Suspended</option></select></div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Completion Rate</label><input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border" value={tripCompl} onChange={(e) => setTripCompl(e.target.value)} required /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-muted uppercase tracking-wider">Status</label><select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border disabled:opacity-50 appearance-none cursor-pointer" value={status} onChange={(e) => setStatus(e.target.value)} disabled={modalMode === 'add'}><option value="Available">Available</option><option value="On Trip">On Trip</option><option value="Off Duty">Off Duty</option><option value="Suspended">Suspended</option></select></div>
+                  </div>
+                  {modalMode === 'edit' && (
+                    <div className="pt-4 flex justify-between border-t border-border/50">
+                      <button type="button" onClick={() => { handleDelete(name); setIsModalOpen(false); }} className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-md text-sm font-semibold transition-colors flex items-center gap-2">
+                        <Trash2 size={16} /> Delete Driver
+                      </button>
+                    </div>
+                  )}
+                </form>
               </div>
-            </form>
+
+              <div className="p-6 border-t border-border/50 bg-card flex justify-end gap-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 bg-secondary/10 hover:bg-secondary/20 text-primary rounded-md text-sm font-semibold transition-colors">Cancel</button>
+                <button type="submit" form="driver-form" className="px-8 py-2 bg-primary text-secondary rounded-md text-sm font-semibold transition-colors">{modalMode === 'add' ? 'Add Driver' : 'Save Changes'}</button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

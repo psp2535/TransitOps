@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Truck, ShieldAlert, Key, Mail, ShieldCheck } from 'lucide-react';
+﻿import React, { useState } from 'react';
+import { Truck, ShieldAlert, Key, Mail, ShieldCheck, ChevronRight } from 'lucide-react';
 import { INITIAL_USERS } from '../initialData';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Login({ onLogin, users }) {
   const [email, setEmail] = useState('RavenK@transitops.in');
@@ -15,13 +16,11 @@ export default function Login({ onLogin, users }) {
     e.preventDefault();
     setError('');
 
-    // Check against dynamic database users
     const user = userList.find(
       (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
     );
 
     if (user) {
-      // Login successful, override role if changed (for easy role testing in hackathon)
       const loggedUser = { ...user, role };
       onLogin(loggedUser);
     } else {
@@ -33,153 +32,179 @@ export default function Login({ onLogin, users }) {
     setEmail(user.email);
     setPassword(user.password);
     setRole(user.role);
+    setError('');
   };
 
   return (
-    <div className="login-screen">
-      {/* Left panel */}
-      <div className="login-left">
-        <div className="login-brand-container">
-          <div className="brand-logo-large">
-            <Truck size={36} className="logo-icon" />
-          </div>
-          <h1 className="login-title">TransitOps</h1>
-          <p className="login-subtitle">Smart Transport Operations Platform</p>
-        </div>
-
-        <div className="login-bullet-info">
-          <h2>One login, four roles:</h2>
-          <ul>
-            <li><span className="dot fleet"></span> Fleet Manager</li>
-            <li><span className="dot dispatcher"></span> Dispatcher</li>
-            <li><span className="dot safety"></span> Safety Officer</li>
-            <li><span className="dot finance"></span> Financial Analyst</li>
-          </ul>
-        </div>
-        
-        <div className="login-footer-text">
-          TransitOps &copy; 2026 • RBAC Enabled
-        </div>
+    <div className="flex h-screen w-full bg-primary relative overflow-hidden font-sans text-primary">
+      {/* Background Graphic */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-electric/10 blur-[120px]"></div>
+        <div className="absolute top-[60%] -right-[10%] w-[40%] h-[60%] rounded-full bg-royal/10 blur-[100px]"></div>
       </div>
 
-      {/* Right panel */}
-      <div className="login-right">
-        <div className="login-card-wrapper">
-          <div className="login-card-header">
-            <h2>Sign in to your account</h2>
-            <p>Enter your credentials to continue</p>
+      <div className="flex w-full z-10 flex-col lg:flex-row">
+        {/* Left Side: Branding */}
+        <div className="hidden lg:flex w-1/2 flex-col justify-between p-16 border-r border-border/50 bg-secondary/30 backdrop-blur-3xl">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
+            className="flex items-center gap-4"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-electric to-neon flex items-center justify-center shadow-lg shadow-electric/20">
+              <Truck size={28} className="text-void" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-heading font-bold tracking-tight">TransitOps</h1>
+              <p className="text-sm text-secondary font-medium">Smart Transport Platform</p>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, duration: 1 }}
+            className="max-w-md"
+          >
+            <h2 className="text-2xl font-heading font-semibold mb-6 leading-tight">
+              One unified platform to command your entire fleet operations.
+            </h2>
+            <div className="space-y-4 text-sm text-secondary">
+              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-electric"></div> Fleet Manager</div>
+              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-neon"></div> Dispatcher</div>
+              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-royal"></div> Safety Officer</div>
+              <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-amber-500"></div> Financial Analyst</div>
+            </div>
+          </motion.div>
+
+          <div className="text-xs text-muted font-medium">
+            TransitOps &copy; 2026 • RBAC Enabled
           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="login-form">
-            <div className="form-group">
-              <label className="form-label" htmlFor="email">EMAIL</label>
-              <div className="input-with-icon">
-                <Mail size={16} className="input-icon" />
-                <input
-                  type="email"
-                  id="email"
-                  className="form-control"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. RavenK@transitops.in"
-                  required
-                />
-              </div>
+        {/* Right Side: Login Form */}
+        <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-24 relative">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
+            className="w-full max-w-md glass-card p-10 relative z-10"
+          >
+            <div className="mb-10 text-center lg:text-left">
+              <h2 className="text-3xl font-heading font-bold mb-2">Welcome back</h2>
+              <p className="text-secondary text-sm">Enter your credentials to access your dashboard</p>
             </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="password">PASSWORD</label>
-              <div className="input-with-icon">
-                <Key size={16} className="input-icon" />
-                <input
-                  type="password"
-                  id="password"
-                  className="form-control"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-secondary uppercase tracking-wider" htmlFor="email">Email address</label>
+                <div className="relative group">
+                  <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-electric" />
+                  <input
+                    type="email"
+                    id="email"
+                    className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric placeholder-muted/70 backdrop-blur-sm"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. RavenK@transitops.in"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="role">ROLE (RBAC)</label>
-              <div className="input-with-icon">
-                <ShieldCheck size={16} className="input-icon" />
-                <select
-                  id="role"
-                  className="form-control select-control"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-secondary uppercase tracking-wider" htmlFor="password">Password</label>
+                <div className="relative group">
+                  <Key size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-electric" />
+                  <input
+                    type="password"
+                    id="password"
+                    className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric placeholder-muted/70 backdrop-blur-sm"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-secondary uppercase tracking-wider" htmlFor="role">Simulate Role (RBAC)</label>
+                <div className="relative group">
+                  <ShieldCheck size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-electric" />
+                  <select
+                    id="role"
+                    className="w-full pl-11 pr-4 py-3 bg-primary/50 border border-border rounded-xl text-sm outline-none transition-all focus:border-electric focus:ring-1 focus:ring-electric appearance-none backdrop-blur-sm cursor-pointer"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                  >
+                    <option value="Fleet Manager">Fleet Manager</option>
+                    <option value="Dispatcher">Dispatcher</option>
+                    <option value="Safety Officer">Safety Officer</option>
+                    <option value="Financial Analyst">Financial Analyst</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted">
+                    <ChevronRight size={16} className="rotate-90" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-sm pt-2">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="relative flex items-center justify-center w-4 h-4 rounded border border-border group-hover:border-electric transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="absolute opacity-0 cursor-pointer h-0 w-0 peer"
+                    />
+                    <div className="w-2 h-2 rounded-sm bg-electric opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                  </div>
+                  <span className="text-secondary group-hover:text-primary transition-colors">Remember me</span>
+                </label>
+                <a href="#forgot" className="text-electric hover:text-cyan-glow hover:underline underline-offset-4 transition-colors font-medium">
+                  Forgot password?
+                </a>
+              </div>
+
+              <button type="submit" className="w-full btn-primary py-3.5 mt-4 text-sm tracking-wide">
+                Sign In to TransitOps
+              </button>
+            </form>
+
+            <AnimatePresence>
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10, height: 0 }} 
+                  animate={{ opacity: 1, y: 0, height: 'auto' }} 
+                  exit={{ opacity: 0, y: -10, height: 0 }}
+                  className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 flex gap-3 text-sm items-start overflow-hidden"
                 >
-                  <option value="Fleet Manager">Fleet Manager</option>
-                  <option value="Dispatcher">Dispatcher</option>
-                  <option value="Safety Officer">Safety Officer</option>
-                  <option value="Financial Analyst">Financial Analyst</option>
-                </select>
-              </div>
-            </div>
+                  <ShieldAlert size={18} className="shrink-0 mt-0.5" />
+                  <p>{error}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
 
-            <div className="form-remember-forgot">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                <span>Remember me</span>
-              </label>
-              <a href="#forgot" className="forgot-link" onClick={(e) => e.preventDefault()}>
-                Forgot password?
-              </a>
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-block login-btn">
-              Sign In
-            </button>
-          </form>
-
-          {/* Quick Demo Login Seeder */}
-          <div className="quick-logins">
-            <p className="quick-login-title">Quick Demo Login (Click to Autofill):</p>
-            <div className="quick-login-grid">
+          {/* Quick Demo Login */}
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6, duration: 1 }}
+            className="w-full max-w-md mt-10"
+          >
+            <p className="text-xs font-semibold text-secondary uppercase tracking-wider mb-4 text-center">Quick Demo Login (Click to Autofill)</p>
+            <div className="grid grid-cols-2 gap-3">
               {userList.map((u) => (
                 <button
                   key={u.role || u.email}
                   type="button"
-                  className="quick-login-btn"
+                  className="flex flex-col items-start p-3 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/60 hover:border-border/80 transition-all text-left group"
                   onClick={() => fillCredentials(u)}
                 >
-                  <span className="role-btn-name">{u.role}</span>
-                  <span className="role-btn-email">{u.email}</span>
+                  <span className="text-xs font-semibold text-primary group-hover:text-electric transition-colors">{u.role}</span>
+                  <span className="text-[10px] text-muted truncate w-full">{u.email}</span>
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="login-scopes-info">
-            <p className="scopes-title">Access is scoped by role after login:</p>
-            <ul>
-              <li><strong>Fleet Manager</strong> &rarr; Fleet, Maintenance</li>
-              <li><strong>Dispatcher</strong> &rarr; Dashboard, Trips</li>
-              <li><strong>Safety Officer</strong> &rarr; Drivers, Compliance</li>
-              <li><strong>Financial Analyst</strong> &rarr; Fuel & Expenses, Analytics</li>
-            </ul>
-          </div>
+          </motion.div>
         </div>
-
-        {/* Error notification box (Absolute placed on right matching mockup error bubble) */}
-        {error && (
-          <div className="login-error-bubble">
-            <div className="error-bubble-title">Error state</div>
-            <div className="error-bubble-content">
-              <ShieldAlert size={16} className="error-icon" />
-              <span>{error}</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
+

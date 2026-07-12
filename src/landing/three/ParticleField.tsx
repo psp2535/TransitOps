@@ -48,7 +48,7 @@ export default function ParticleField({ count = 500 }) {
   })
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
+    <instancedMesh ref={meshRef} args={[null, null, count]}>
       <sphereGeometry args={[1, 6, 6]} />
       <meshBasicMaterial color="#00d4ff" transparent opacity={0.5} />
     </instancedMesh>

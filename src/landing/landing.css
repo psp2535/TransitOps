@@ -7,16 +7,16 @@
 
 /* === CSS Variables === */
 :root {
-  --landing-void: #030712;
-  --landing-midnight: #0a0f1e;
-  --landing-abyss: #111827;
-  --landing-electric: #00d4ff;
-  --landing-neon: #3b82f6;
-  --landing-royal: #8b5cf6;
-  --landing-cyan-glow: #22d3ee;
-  --landing-soft-white: #f0f4ff;
-  --landing-glass-bg: rgba(17, 24, 39, 0.5);
-  --landing-glass-border: rgba(255, 255, 255, 0.06);
+  --landing-void: #0A0A0A;
+  --landing-midnight: #111111;
+  --landing-abyss: #222222;
+  --landing-electric: #0070F3;
+  --landing-neon: #0070F3;
+  --landing-royal: #3291FF;
+  --landing-cyan-glow: #3291FF;
+  --landing-soft-white: #FAFAFA;
+  --landing-glass-bg: rgba(10, 10, 10, 0.8);
+  --landing-glass-border: rgba(255, 255, 255, 0.1);
 }
 
 /* === Landing Page Root === */

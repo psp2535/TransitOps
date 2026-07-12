@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+﻿import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -77,7 +77,7 @@ export default function App() {
       })
       .catch(err => {
         console.warn('Backend server not detected or offline. Falling back to local storage cache.', err);
-        // Offline local storage fallback (no seed data on frontend — use cached or empty)
+        // Offline local storage fallback (no seed data on frontend â€” use cached or empty)
         const savedVehicles = localStorage.getItem('vehicles');
         const savedDrivers = localStorage.getItem('drivers');
         const savedTrips = localStorage.getItem('trips');
@@ -149,7 +149,7 @@ export default function App() {
         })
         .catch(err => {
           console.warn('Backend reset failed.', err);
-          alert('Could not reset — backend server is offline.');
+          alert('Could not reset â€” backend server is offline.');
         });
     }
   };
@@ -274,12 +274,7 @@ export default function App() {
     switch (activePage) {
       case 1:
         return (
-          <Dashboard 
-            vehicles={vehicles} 
-            drivers={drivers} 
-            trips={trips} 
-            maintenanceLogs={maintenanceLogs}
-          />
+          <Dashboard vehicles={vehicles} drivers={drivers} trips={trips} maintenanceLogs={maintenanceLogs} currentUser={currentUser} />
         );
       case 2:
         return (
@@ -354,11 +349,11 @@ export default function App() {
           />
         );
       default:
-        return <Dashboard vehicles={vehicles} drivers={drivers} trips={trips} maintenanceLogs={maintenanceLogs} />;
+        return <Dashboard vehicles={vehicles} drivers={drivers} trips={trips} maintenanceLogs={maintenanceLogs} currentUser={currentUser} />;
     }
   };
 
-  // Landing page — shown before login
+  // Landing page â€” shown before login
   if (showLanding) {
     return (
       <Suspense fallback={
@@ -377,7 +372,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-layout">
+    <div className="flex h-screen w-full bg-primary overflow-hidden">
       {/* Sidebar Navigation */}
       <Sidebar 
         activePage={activePage} 
@@ -390,9 +385,11 @@ export default function App() {
       />
 
       {/* Main Panel Content Area */}
-      <main className="main-content">
+      <main className="flex-1 flex flex-col h-full overflow-y-auto relative">
         {renderPageContent()}
       </main>
     </div>
   );
 }
+
+

@@ -1,279 +1,223 @@
-import React, { useState } from 'react';
-import { 
-  Activity, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Navigation, 
-  Clock, 
-  Users, 
-  Percent, 
-  Search 
-} from 'lucide-react';
+﻿import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 
-export default function Dashboard({ vehicles, drivers, trips, maintenanceLogs }) {
+export default function Dashboard({ vehicles, drivers, trips, currentUser }) {
   const [filterType, setFilterType] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterRegion, setFilterRegion] = useState('All');
 
-  // Filter vehicles
-  const filteredVehicles = vehicles.filter((v) => {
-    const matchType = filterType === 'All' || v.type === filterType;
-    const matchStatus = filterStatus === 'All' || v.status === filterStatus;
-    const matchRegion = filterRegion === 'All' || v.region === filterRegion;
-    return matchType && matchStatus && matchRegion;
-  });
-
-  // KPI Calculations (based on filtered or overall, let's do overall as dashboard KPIs but allow filtered view, or calculate based on current active list. The mockup has specific fixed stats like Active: 53, Available: 42, In Maintenance: 5, Active Trips: 18, Pending Trips: 9, Drivers on Duty: 26, Fleet Util: 81%. We will compute them dynamically from our state so they reflect real operations!)
-  const totalVehiclesCount = vehicles.length;
-  const activeVehiclesCount = vehicles.filter(v => v.status === 'On Trip').length;
+  const activeVehiclesCount = vehicles.filter(v => v.status === 'On Trip' || v.status === 'On Mission').length;
   const availableVehiclesCount = vehicles.filter(v => v.status === 'Available').length;
-  const inMaintenanceCount = vehicles.filter(v => v.status === 'In Shop').length;
+  const inMaintenanceCount = vehicles.filter(v => v.status === 'In Shop' || v.status === 'In Maintenance').length;
   const retiredVehiclesCount = vehicles.filter(v => v.status === 'Retired').length;
   
-  const activeTripsCount = trips.filter(t => t.status === 'On Trip' || t.status === 'Dispatched').length;
-  const pendingTripsCount = trips.filter(t => t.status === 'Draft').length;
+  const activeTripsCount = trips.filter(t => t.status === 'On Trip' || t.status === 'In Progress').length;
+  const pendingTripsCount = trips.filter(t => t.status === 'Draft' || t.status === 'Dispatched').length;
   
-  const driversOnDuty = drivers.filter(d => d.status === 'Available' || d.status === 'On Trip').length;
+  const driversOnDuty = drivers.filter(d => d.status === 'Available' || d.status === 'Active' || d.status === 'On Trip').length;
   
-  // Utilization = (On Trip Vehicles / (Total Vehicles - Retired Vehicles)) * 100
-  const activeVehicles = vehicles.filter(v => v.status === 'On Trip').length;
   const totalOperable = vehicles.filter(v => v.status !== 'Retired').length;
-  const fleetUtilization = totalOperable > 0 
-    ? Math.round((activeVehicles / totalOperable) * 100) 
-    : 0;
+  const fleetUtilization = totalOperable > 0 ? Math.round((activeVehiclesCount / totalOperable) * 100) : 0;
 
-  // Recent trips table data
-  // Limit to 6 items
-  const recentTrips = trips.slice(0, 6);
+  // Recent Trips (take first 5)
+  const recentTrips = trips.slice(0, 5);
 
-  // Status Bar Chart data calculations
-  const totalStatusCount = availableVehiclesCount + activeVehiclesCount + inMaintenanceCount + retiredVehiclesCount;
   const getPercentage = (count) => {
-    if (totalStatusCount === 0) return 0;
-    return Math.round((count / totalStatusCount) * 100);
+    const total = vehicles.length;
+    if (total === 0) return 0;
+    return Math.round((count / total) * 100);
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+  };
+
+  // User avatar logic
+  const initials = currentUser?.name 
+    ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()
+    : 'RK';
+  
+  const userName = currentUser?.name || 'Raven K.';
+  const userRole = currentUser?.role || 'Dispatcher';
+
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Real-time fleet performance overview</p>
+    <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
+      
+      {/* Top Bar matching wireframe */}
+      <div className="flex items-center justify-between px-8 py-3 border-b border-border/50 bg-card">
+        <div className="relative w-80">
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
+          />
         </div>
-      </div>
-
-      {/* Filters Bar */}
-      <div className="filters-panel card">
-        <span className="filters-label">FILTERS</span>
-        <div className="filters-row">
-          <div className="filter-item">
-            <select 
-              value={filterType} 
-              onChange={(e) => setFilterType(e.target.value)}
-              className="form-control select-control"
-            >
-              <option value="All">Vehicle Type: All</option>
-              <option value="Van">Van</option>
-              <option value="Truck">Truck</option>
-              <option value="Mini">Mini</option>
-            </select>
-          </div>
-          <div className="filter-item">
-            <select 
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="form-control select-control"
-            >
-              <option value="All">Status: All</option>
-              <option value="Available">Available</option>
-              <option value="On Trip">On Trip</option>
-              <option value="In Shop">In Shop</option>
-              <option value="Retired">Retired</option>
-            </select>
-          </div>
-          <div className="filter-item">
-            <select 
-              value={filterRegion} 
-              onChange={(e) => setFilterRegion(e.target.value)}
-              className="form-control select-control"
-            >
-              <option value="All">Region: All</option>
-              <option value="North">North</option>
-              <option value="East">East</option>
-              <option value="West">West</option>
-              <option value="South">South</option>
-            </select>
+        
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-secondary">{userName}</span>
+          <div className="flex items-center gap-2 pl-3 pr-1 py-1 border border-border/80 rounded-full shadow-sm bg-card">
+            <span className="text-xs font-semibold text-electric">{userRole}</span>
+            <div className="w-6 h-6 rounded-full bg-electric text-void flex items-center justify-center text-[10px] font-bold">
+              {initials}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards Row */}
-      <div className="dashboard-grid">
-        <div className="kpi-card border-blue">
-          <div className="kpi-icon-wrapper text-blue">
-            <Activity size={24} />
+      <motion.div 
+        initial="hidden" animate="show" variants={containerVariants}
+        className="flex-1 overflow-y-auto p-8 space-y-10"
+      >
+        {/* Filters */}
+        <motion.div variants={itemVariants} className="flex flex-col gap-2">
+          <span className="text-xs font-bold text-muted uppercase tracking-wider">Filters</span>
+          <div className="flex flex-wrap gap-4 items-center">
+            {['Vehicle Type', 'Status', 'Region'].map(filter => (
+              <div key={filter} className="relative shadow-sm rounded-md">
+                <select className="text-sm bg-card border border-border/80 rounded-md px-4 py-1.5 text-primary outline-none focus:border-border appearance-none pr-8 min-w-[140px] cursor-pointer">
+                  <option>{filter}: All</option>
+                </select>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-xs">â–¼</div>
+              </div>
+            ))}
           </div>
-          <div className="kpi-details">
-            <span className="kpi-label">ACTIVE VEHICLES</span>
-            <h2 className="kpi-value">{activeVehiclesCount}</h2>
-          </div>
-        </div>
+        </motion.div>
 
-        <div className="kpi-card border-green">
-          <div className="kpi-icon-wrapper text-green">
-            <CheckCircle2 size={24} />
-          </div>
-          <div className="kpi-details">
-            <span className="kpi-label">AVAILABLE VEHICLES</span>
-            <h2 className="kpi-value">{availableVehiclesCount}</h2>
-          </div>
-        </div>
-
-        <div className="kpi-card border-orange">
-          <div className="kpi-icon-wrapper text-orange">
-            <AlertTriangle size={24} />
-          </div>
-          <div className="kpi-details">
-            <span className="kpi-label">VEHICLES IN MAINTENANCE</span>
-            <h2 className="kpi-value orange-highlight">{inMaintenanceCount}</h2>
-          </div>
-        </div>
-
-        <div className="kpi-card border-blue">
-          <div className="kpi-icon-wrapper text-blue">
-            <Navigation size={24} />
-          </div>
-          <div className="kpi-details">
-            <span className="kpi-label">ACTIVE TRIPS</span>
-            <h2 className="kpi-value">{activeTripsCount}</h2>
-          </div>
-        </div>
-
-        <div className="kpi-card border-purple">
-          <div className="kpi-icon-wrapper text-purple">
-            <Clock size={24} />
-          </div>
-          <div className="kpi-details">
-            <span className="kpi-label">PENDING TRIPS</span>
-            <h2 className="kpi-value">{pendingTripsCount}</h2>
-          </div>
-        </div>
-
-        <div className="kpi-card border-teal">
-          <div className="kpi-icon-wrapper text-teal">
-            <Users size={24} />
-          </div>
-          <div className="kpi-details">
-            <span className="kpi-label">DRIVERS ON DUTY</span>
-            <h2 className="kpi-value">{driversOnDuty}</h2>
-          </div>
-        </div>
-
-        <div className="kpi-card border-util">
-          <div className="kpi-icon-wrapper text-util">
-            <Percent size={24} />
-          </div>
-          <div className="kpi-details">
-            <span className="kpi-label">FLEET UTILIZATION</span>
-            <h2 className="kpi-value util-highlight">{fleetUtilization}%</h2>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Sections: Recent Trips and Status Chart */}
-      <div className="split-layout">
-        {/* Recent Trips */}
-        <div className="card">
-          <h3 className="card-section-title">RECENT TRIPS</h3>
-          <div className="table-responsive">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>TRIP</th>
-                  <th>VEHICLE</th>
-                  <th>DRIVER</th>
-                  <th>STATUS</th>
-                  <th>ETA</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentTrips.map((trip) => (
-                  <tr key={trip.id}>
-                    <td style={{ fontWeight: 600 }}>{trip.id}</td>
-                    <td>{trip.vehicle || '—'}</td>
-                    <td>{trip.driver || '—'}</td>
-                    <td>
-                      <span className={`badge badge-${trip.status.replace(/\s+/g, '').toLowerCase()}`}>
-                        {trip.status}
-                      </span>
-                    </td>
-                    <td>{trip.eta}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Vehicle Status Progress Chart */}
-        <div className="card">
-          <h3 className="card-section-title">VEHICLE STATUS</h3>
+        {/* KPI Grid */}
+        <motion.div variants={containerVariants} className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4">
+          {/* 1. Active Vehicles */}
+          <motion.div variants={itemVariants} className="bg-card border border-border/80 border-l-[4px] border-l-neon p-4 rounded-md flex flex-col justify-between h-24 shadow-sm">
+            <span className="text-[9px] font-bold text-muted uppercase tracking-widest leading-tight">Active Vehicles</span>
+            <span className="text-2xl font-bold">{activeVehiclesCount}</span>
+          </motion.div>
           
-          <div className="status-bars-container">
-            <div className="status-bar-item">
-              <div className="status-bar-header">
-                <span className="status-bar-name">Available</span>
-                <span className="status-bar-value">{availableVehiclesCount} vehicles ({getPercentage(availableVehiclesCount)}%)</span>
-              </div>
-              <div className="progress-bar-bg">
-                <div 
-                  className="progress-bar-fill fill-green" 
-                  style={{ width: `${getPercentage(availableVehiclesCount)}%` }}
-                ></div>
-              </div>
-            </div>
+          {/* 2. Available Vehicles */}
+          <motion.div variants={itemVariants} className="bg-card border border-border/80 border-l-[4px] border-l-green-500 p-4 rounded-md flex flex-col justify-between h-24 shadow-sm">
+            <span className="text-[9px] font-bold text-muted uppercase tracking-widest leading-tight">Available Vehicles</span>
+            <span className="text-2xl font-bold">{availableVehiclesCount}</span>
+          </motion.div>
+          
+          {/* 3. Vehicles in Maintenance */}
+          <motion.div variants={itemVariants} className="bg-card border border-border/80 border-l-[4px] border-l-orange-500 p-4 rounded-md flex flex-col justify-between h-24 shadow-sm">
+            <span className="text-[9px] font-bold text-muted uppercase tracking-widest leading-tight">Vehicles in Maintenance</span>
+            <span className="text-2xl font-bold">{inMaintenanceCount < 10 ? '0'+inMaintenanceCount : inMaintenanceCount}</span>
+          </motion.div>
+          
+          {/* 4. Active Trips */}
+          <motion.div variants={itemVariants} className="bg-card border border-border/80 border-l-[4px] border-l-neon p-4 rounded-md flex flex-col justify-between h-24 shadow-sm">
+            <span className="text-[9px] font-bold text-muted uppercase tracking-widest leading-tight">Active Trips</span>
+            <span className="text-2xl font-bold">{activeTripsCount}</span>
+          </motion.div>
+          
+          {/* 5. Pending Trips */}
+          <motion.div variants={itemVariants} className="bg-card border border-border/80 border-l-[4px] border-l-neon p-4 rounded-md flex flex-col justify-between h-24 shadow-sm">
+            <span className="text-[9px] font-bold text-muted uppercase tracking-widest leading-tight">Pending Trips</span>
+            <span className="text-2xl font-bold">{pendingTripsCount < 10 ? '0'+pendingTripsCount : pendingTripsCount}</span>
+          </motion.div>
+          
+          {/* 6. Drivers on Duty */}
+          <motion.div variants={itemVariants} className="bg-card border border-border/80 border-l-[4px] border-l-neon p-4 rounded-md flex flex-col justify-between h-24 shadow-sm">
+            <span className="text-[9px] font-bold text-muted uppercase tracking-widest leading-tight">Drivers on Duty</span>
+            <span className="text-2xl font-bold">{driversOnDuty}</span>
+          </motion.div>
+          
+          {/* 7. Fleet Utilization */}
+          <motion.div variants={itemVariants} className="bg-card border border-border/80 border-l-[4px] border-l-green-500 p-4 rounded-md flex flex-col justify-between h-24 shadow-sm">
+            <span className="text-[9px] font-bold text-muted uppercase tracking-widest leading-tight">Fleet Utilization</span>
+            <span className="text-2xl font-bold">{fleetUtilization}%</span>
+          </motion.div>
+        </motion.div>
 
-            <div className="status-bar-item">
-              <div className="status-bar-header">
-                <span className="status-bar-name">On Trip</span>
-                <span className="status-bar-value">{activeVehiclesCount} vehicles ({getPercentage(activeVehiclesCount)}%)</span>
-              </div>
-              <div className="progress-bar-bg">
-                <div 
-                  className="progress-bar-fill fill-blue" 
-                  style={{ width: `${getPercentage(activeVehiclesCount)}%` }}
-                ></div>
-              </div>
-            </div>
+        {/* Bottom Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Left: Recent Trips Table */}
+          <motion.div variants={itemVariants} className="lg:col-span-2 bg-card p-6 border border-border/80 rounded-md shadow-sm">
+            <h3 className="text-[11px] font-bold text-muted uppercase tracking-widest mb-6">Recent Trips</h3>
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th className="py-2 pr-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Trip</th>
+                    <th className="py-2 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Vehicle</th>
+                    <th className="py-2 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Driver</th>
+                    <th className="py-2 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Status</th>
+                    <th className="py-2 pl-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">ETA</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {recentTrips.map((trip) => {
+                    let statusClass = "bg-border text-primary";
+                    if (trip.status === "On Trip" || trip.status === "In Progress") {
+                      statusClass = "bg-neon text-white";
+                    } else if (trip.status === "Completed") {
+                      statusClass = "bg-green-500 text-white";
+                    } else if (trip.status === "Dispatched") {
+                      statusClass = "bg-neon text-white";
+                    } else if (trip.status === "Draft") {
+                      statusClass = "bg-gray-500 text-white";
+                    }
 
-            <div className="status-bar-item">
-              <div className="status-bar-header">
-                <span className="status-bar-name">In Shop</span>
-                <span className="status-bar-value">{inMaintenanceCount} vehicles ({getPercentage(inMaintenanceCount)}%)</span>
-              </div>
-              <div className="progress-bar-bg">
-                <div 
-                  className="progress-bar-fill fill-orange" 
-                  style={{ width: `${getPercentage(inMaintenanceCount)}%` }}
-                ></div>
-              </div>
+                    return (
+                      <tr key={trip.id} className="hover:bg-secondary/5 transition-colors">
+                        <td className="py-4 pr-4 text-sm font-medium">{trip.id}</td>
+                        <td className="py-4 px-4 text-sm">{trip.vehicle || 'â€”'}</td>
+                        <td className="py-4 px-4 text-sm">{trip.driver || 'â€”'}</td>
+                        <td className="py-4 px-4">
+                          <span className={`px-4 py-1.5 rounded-md text-xs font-medium ${statusClass}`}>
+                            {trip.status}
+                          </span>
+                        </td>
+                        <td className="py-4 pl-4 text-sm">{trip.eta || 'â€”'}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
+          </motion.div>
 
-            <div className="status-bar-item">
-              <div className="status-bar-header">
-                <span className="status-bar-name">Retired</span>
-                <span className="status-bar-value">{retiredVehiclesCount} vehicles ({getPercentage(retiredVehiclesCount)}%)</span>
-              </div>
-              <div className="progress-bar-bg">
-                <div 
-                  className="progress-bar-fill fill-red" 
-                  style={{ width: `${getPercentage(retiredVehiclesCount)}%` }}
-                ></div>
-              </div>
+          {/* Right: Vehicle Status */}
+          <motion.div variants={itemVariants} className="lg:col-span-1 bg-card p-6 border border-border/80 rounded-md shadow-sm">
+            <h3 className="text-[11px] font-bold text-muted uppercase tracking-widest mb-6">Vehicle Status</h3>
+            <div className="space-y-6">
+              {[
+                { label: 'Available', value: availableVehiclesCount, color: 'bg-green-500' },
+                { label: 'On Trip', value: activeVehiclesCount, color: 'bg-neon' },
+                { label: 'In Shop', value: inMaintenanceCount, color: 'bg-orange-500' },
+                { label: 'Retired', value: retiredVehiclesCount, color: 'bg-red-500' }
+              ].map((stat, i) => {
+                const pct = getPercentage(stat.value);
+                return (
+                  <div key={i} className="flex items-center gap-6">
+                    <div className="w-20 shrink-0 text-sm font-medium text-secondary">{stat.label}</div>
+                    <div className="flex-1 h-3.5 bg-secondary/30 rounded-sm overflow-hidden flex">
+                      <motion.div 
+                        initial={{ width: 0 }} 
+                        animate={{ width: `${pct}%` }} 
+                        transition={{ duration: 1, delay: i * 0.1 + 0.2 }}
+                        className={`h-full ${stat.color}`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          </motion.div>
+
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
+
+

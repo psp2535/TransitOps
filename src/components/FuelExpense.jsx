@@ -1,457 +1,276 @@
-import React, { useState } from 'react';
-import { Coins, Plus, ShieldAlert, X, Fuel, Landmark, ArrowUpRight } from 'lucide-react';
+﻿import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
-export default function FuelExpense({ 
-  vehicles, 
-  fuelLogs, 
-  setFuelLogs, 
-  expenses, 
-  setExpenses, 
-  maintenanceLogs, 
-  currentUser 
-}) {
-  // Modal states
+export default function FuelExpense({ vehicles, fuelLogs, setFuelLogs, expenses, setExpenses, maintenanceLogs, currentUser }) {
   const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
 
-  // Fuel form fields
-  const [fuelVehicleReg, setFuelVehicleReg] = useState('');
-  const [fuelLiters, setFuelLiters] = useState('');
-  const [fuelCost, setFuelCost] = useState('');
-  const [fuelDate, setFuelDate] = useState(new Date().toISOString().split('T')[0]);
+  // Fuel Form State
+  const [fVehicle, setFVehicle] = useState('');
+  const [fLiters, setFLiters] = useState('');
+  const [fCost, setFCost] = useState('');
+  const [fDate, setFDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Expense form fields
-  const [expVehicleReg, setExpVehicleReg] = useState('');
-  const [expType, setExpType] = useState('Tolls');
-  const [expAmount, setExpAmount] = useState('');
-  const [expDesc, setExpDesc] = useState('');
-  const [expDate, setExpDate] = useState(new Date().toISOString().split('T')[0]);
+  // Expense Form State
+  const [eVehicle, setEVehicle] = useState('');
+  const [eType, setEType] = useState('Tolls');
+  const [eAmount, setEAmount] = useState('');
+  const [eDesc, setEDesc] = useState('');
+  const [eDate, setEDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const [validationError, setValidationError] = useState('');
+  const isAuthorized = currentUser?.role === 'Fleet Manager' || currentUser?.role === 'Financial Analyst';
 
-  const isAuthorized = currentUser?.role === 'Financial Analyst' || currentUser?.role === 'Fleet Manager';
-
-  // Calculations for summary per vehicle
-  const calculateTotalCosts = () => {
-    return vehicles.map(vehicle => {
-      // Fuel total for this vehicle (mapping by name)
-      const fuelTotal = fuelLogs
-        .filter(f => f.vehicle.toLowerCase() === vehicle.name.toLowerCase())
-        .reduce((sum, f) => sum + f.cost, 0);
-
-      // Maintenance total for this vehicle
-      const maintTotal = maintenanceLogs
-        .filter(m => m.vehicle.toLowerCase() === vehicle.name.toLowerCase())
-        .reduce((sum, m) => sum + m.cost, 0);
-
-      // Expenses total for this vehicle
-      const expTotal = expenses
-        .filter(e => e.vehicle.toLowerCase() === vehicle.name.toLowerCase())
-        .reduce((sum, e) => sum + e.amount, 0);
-
-      const totalOpCost = fuelTotal + maintTotal + expTotal;
-
-      return {
-        regNo: vehicle.regNo,
-        name: vehicle.name,
-        fuel: fuelTotal,
-        maintenance: maintTotal,
-        other: expTotal,
-        total: totalOpCost
-      };
-    });
-  };
-
-  const operationalCostsSummary = calculateTotalCosts();
-
-  // Submit Fuel Log
-  const handleFuelSubmit = (e) => {
+  const handleLogFuel = (e) => {
     e.preventDefault();
-    setValidationError('');
-
-    const vehicleObj = vehicles.find(v => v.regNo === fuelVehicleReg);
-    if (!vehicleObj) {
-      setValidationError('Please select a valid vehicle.');
-      return;
-    }
-
-    const newLog = {
-      id: `F0${fuelLogs.length + 1}`,
-      vehicle: vehicleObj.name,
-      cost: Number(fuelCost),
-      liters: Number(fuelLiters),
-      date: fuelDate
+    if (!isAuthorized) return;
+    const newFuel = {
+      id: 'F' + String(Math.floor(Math.random() * 9000) + 1000),
+      vehicle: fVehicle,
+      liters: Number(fLiters),
+      cost: Number(fCost),
+      date: fDate
     };
-
-    setFuelLogs([newLog, ...fuelLogs]);
+    setFuelLogs([...fuelLogs, newFuel]);
     setIsFuelModalOpen(false);
-    setFuelVehicleReg('');
-    setFuelLiters('');
-    setFuelCost('');
+    setFVehicle(''); setFLiters(''); setFCost('');
   };
 
-  // Submit Expense Log
-  const handleExpenseSubmit = (e) => {
+  const handleAddExpense = (e) => {
     e.preventDefault();
-    setValidationError('');
-
-    const vehicleObj = vehicles.find(v => v.regNo === expVehicleReg);
-    if (!vehicleObj) {
-      setValidationError('Please select a valid vehicle.');
-      return;
-    }
-
-    const newExpense = {
-      id: `E0${expenses.length + 1}`,
-      vehicle: vehicleObj.name,
-      type: expType,
-      amount: Number(expAmount),
-      date: expDate,
-      description: expDesc.trim()
+    if (!isAuthorized) return;
+    const newExp = {
+      id: 'E' + String(Math.floor(Math.random() * 9000) + 1000),
+      vehicle: eVehicle,
+      type: eType,
+      amount: Number(eAmount),
+      description: eDesc,
+      date: eDate
     };
-
-    setExpenses([newExpense, ...expenses]);
+    setExpenses([...expenses, newExp]);
     setIsExpenseModalOpen(false);
-    setExpVehicleReg('');
-    setExpAmount('');
-    setExpDesc('');
+    setEVehicle(''); setEAmount(''); setEDesc('');
   };
 
-  // Format Currency (INR)
-  const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(val);
-  };
+  // Calculations
+  const totalFuelCost = fuelLogs.reduce((acc, curr) => acc + curr.cost, 0);
+  const totalMaintCost = (maintenanceLogs || []).reduce((acc, curr) => acc + curr.cost, 0);
+  const totalOtherExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalOperationalCost = totalFuelCost + totalMaintCost + totalOtherExpenses;
+
+  const initials = currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'RK';
+  const userName = currentUser?.name || 'Raven K.';
+  const userRole = currentUser?.role || 'Dispatcher';
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Fuel & Expense Management</h1>
-          <p className="page-subtitle">Track operational costs, fuel efficiency logs, and logistics tolls</p>
+    <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
+      
+      {/* Top Bar */}
+      <div className="flex items-center justify-between px-8 py-3 border-b border-border/50 bg-card">
+        <div className="relative w-80">
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
+          />
         </div>
         
-        {isAuthorized ? (
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={() => { setValidationError(''); setIsFuelModalOpen(true); }} className="btn btn-primary" style={{ backgroundColor: '#22c55e' }}>
-              <Fuel size={18} />
-              <span>Log Fuel</span>
-            </button>
-            <button onClick={() => { setValidationError(''); setIsExpenseModalOpen(true); }} className="btn btn-primary">
-              <Coins size={18} />
-              <span>Add Expense</span>
-            </button>
-          </div>
-        ) : (
-          <div className="role-read-only-badge">
-            <ShieldAlert size={14} />
-            <span>Read-Only (Requires Financial Analyst / Fleet Manager)</span>
-          </div>
-        )}
-      </div>
-
-      <div className="split-layout">
-        {/* Fuel Logs Table */}
-        <div className="card">
-          <h3 className="card-section-title">FUEL LOGS</h3>
-          <div className="table-responsive">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>VEHICLE</th>
-                  <th>LITERS</th>
-                  <th>COST</th>
-                  <th>DATE</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fuelLogs.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                      No fuel logs recorded.
-                    </td>
-                  </tr>
-                ) : (
-                  fuelLogs.map((log) => (
-                    <tr key={log.id}>
-                      <td style={{ fontWeight: 600 }}>{log.vehicle}</td>
-                      <td>{log.liters} L</td>
-                      <td style={{ color: '#16a34a', fontWeight: 600 }}>{formatCurrency(log.cost)}</td>
-                      <td>{log.date}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Other Expenses Table */}
-        <div className="card">
-          <h3 className="card-section-title">OTHER EXPENSES (TOLLS / FEES)</h3>
-          <div className="table-responsive">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>VEHICLE</th>
-                  <th>TYPE</th>
-                  <th>AMOUNT</th>
-                  <th>DESCRIPTION</th>
-                  <th>DATE</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                      No other expenses recorded.
-                    </td>
-                  </tr>
-                ) : (
-                  expenses.map((exp) => (
-                    <tr key={exp.id}>
-                      <td style={{ fontWeight: 600 }}>{exp.vehicle}</td>
-                      <td>
-                        <span className={`badge ${exp.type === 'Tolls' ? 'badge-ontrip' : 'badge-draft'}`}>
-                          {exp.type}
-                        </span>
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{formatCurrency(exp.amount)}</td>
-                      <td>{exp.description}</td>
-                      <td>{exp.date}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Operational Cost summary section */}
-      <div className="card" style={{ marginTop: '1rem' }}>
-        <h3 className="card-section-title">TOTAL VEHICLE OPERATIONAL COST</h3>
-        <div className="table-responsive">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>VEHICLE</th>
-                <th>REG. NO</th>
-                <th>FUEL COSTS</th>
-                <th>MAINTENANCE COSTS</th>
-                <th>TOLLS & OTHER</th>
-                <th style={{ color: 'var(--accent-color)', fontWeight: 700 }}>TOTAL OPERATIONAL COST</th>
-              </tr>
-            </thead>
-            <tbody>
-              {operationalCostsSummary.map(row => (
-                <tr key={row.regNo}>
-                  <td style={{ fontWeight: 600 }}>{row.name}</td>
-                  <td style={{ letterSpacing: '0.5px' }}>{row.regNo}</td>
-                  <td>{formatCurrency(row.fuel)}</td>
-                  <td>{formatCurrency(row.maintenance)}</td>
-                  <td>{formatCurrency(row.other)}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--accent-color)' }}>
-                    {formatCurrency(row.total)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Fuel Log Modal */}
-      {isFuelModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h3>Log Fuel Purchase</h3>
-              <button onClick={() => setIsFuelModalOpen(false)} className="modal-close-btn">
-                <X size={20} />
-              </button>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-secondary">{userName}</span>
+          <div className="flex items-center gap-2 pl-3 pr-1 py-1 border border-border/80 rounded-full shadow-sm bg-card">
+            <span className="text-xs font-semibold text-accent">{userRole}</span>
+            <div className="w-6 h-6 rounded-full bg-accent text-white flex items-center justify-center text-[10px] font-bold">
+              {initials}
             </div>
-            <form onSubmit={handleFuelSubmit}>
-              <div className="modal-body">
-                {validationError && (
-                  <div className="validation-alert" style={{ marginBottom: '1.25rem' }}>
-                    <ShieldAlert size={16} />
-                    <span>{validationError}</span>
-                  </div>
-                )}
-                
-                <div className="form-group">
-                  <label className="form-label">SELECT VEHICLE</label>
-                  <select
-                    className="form-control select-control"
-                    value={fuelVehicleReg}
-                    onChange={(e) => setFuelVehicleReg(e.target.value)}
-                    required
-                  >
-                    <option value="">Select vehicle...</option>
-                    {vehicles.map(v => (
-                      <option key={v.regNo} value={v.regNo}>{v.name} ({v.regNo})</option>
-                    ))}
-                  </select>
-                </div>
+          </div>
+        </div>
+      </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">FUEL QUANTITY (LITERS)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={fuelLiters}
-                      onChange={(e) => setFuelLiters(e.target.value)}
-                      placeholder="e.g. 50"
-                      min="1"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">TOTAL COST (INR)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={fuelCost}
-                      onChange={(e) => setFuelCost(e.target.value)}
-                      placeholder="e.g. 4500"
-                      min="1"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">DATE</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={fuelDate}
-                    onChange={(e) => setFuelDate(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" onClick={() => setIsFuelModalOpen(false)} className="btn btn-secondary">
-                  Cancel
+      <div className="flex-1 overflow-y-auto p-8">
+        
+        <div className="w-full space-y-12 max-w-[1600px] mx-auto">
+          
+          {/* FUEL LOGS SECTION */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Fuel Logs</h3>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setIsFuelModalOpen(true)} disabled={!isAuthorized} className="px-5 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
+                  + Log Fuel
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#22c55e' }}>
-                  Log Fuel
+                <button onClick={() => setIsExpenseModalOpen(true)} disabled={!isAuthorized} className="px-5 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
+                  + Add Expense
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Expense Modal */}
-      {isExpenseModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h3>Add Other Expense</h3>
-              <button onClick={() => setIsExpenseModalOpen(false)} className="modal-close-btn">
-                <X size={20} />
-              </button>
             </div>
-            <form onSubmit={handleExpenseSubmit}>
-              <div className="modal-body">
-                {validationError && (
-                  <div className="validation-alert" style={{ marginBottom: '1.25rem' }}>
-                    <ShieldAlert size={16} />
-                    <span>{validationError}</span>
-                  </div>
-                )}
-                
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">SELECT VEHICLE</label>
-                    <select
-                      className="form-control select-control"
-                      value={expVehicleReg}
-                      onChange={(e) => setExpVehicleReg(e.target.value)}
-                      required
-                    >
-                      <option value="">Select vehicle...</option>
-                      {vehicles.map(v => (
-                        <option key={v.regNo} value={v.regNo}>{v.name} ({v.regNo})</option>
-                      ))}
+
+            <div className="w-full bg-card border border-border/80 rounded-md shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Vehicle</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Date</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Liters</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Fuel Cost (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {fuelLogs.length === 0 && (
+                    <tr><td colSpan="4" className="py-4 px-4 text-sm text-center text-muted">No fuel logs found.</td></tr>
+                  )}
+                  {fuelLogs.slice().reverse().map((log) => (
+                    <tr key={log.id} className="hover:bg-secondary/5 transition-colors">
+                      <td className="py-4 px-4 text-sm font-medium">{log.vehicle}</td>
+                      <td className="py-4 px-4 text-sm">{log.date}</td>
+                      <td className="py-4 px-4 text-sm">{log.liters} L</td>
+                      <td className="py-4 px-4 text-sm">{new Intl.NumberFormat('en-IN').format(log.cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* OTHER EXPENSES SECTION */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Other Expenses (Toll / Misc)</h3>
+            
+            <div className="w-full bg-card border border-border/80 rounded-md shadow-sm overflow-hidden border-b-4 border-b-primary">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Vehicle</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Expense Type</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Date</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Description</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {expenses.length === 0 && (
+                    <tr><td colSpan="5" className="py-4 px-4 text-sm text-center text-muted">No expenses recorded.</td></tr>
+                  )}
+                  {expenses.slice().reverse().map((expense) => (
+                    <tr key={expense.id} className="hover:bg-secondary/5 transition-colors">
+                      <td className="py-4 px-4 text-sm font-medium">{expense.vehicle}</td>
+                      <td className="py-4 px-4 text-sm">{expense.type}</td>
+                      <td className="py-4 px-4 text-sm">{expense.date}</td>
+                      <td className="py-4 px-4 text-sm">{expense.description}</td>
+                      <td className="py-4 px-4 text-sm font-medium">{new Intl.NumberFormat('en-IN').format(expense.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Total Footer */}
+            <div className="w-full pt-4 flex items-center justify-between border-t-4 border-t-primary dark:border-t-white/80">
+              <span className="text-xs font-bold text-secondary uppercase tracking-widest">
+                Total Operational Cost (Auto) = Fuel + Maint + Expenses
+              </span>
+              <span className="text-lg font-bold text-orange-500">
+                ₹ {new Intl.NumberFormat('en-IN').format(totalOperationalCost)}
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* Fuel Modal */}
+      <AnimatePresence>
+        {isFuelModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-void/80 backdrop-blur-sm" onClick={() => setIsFuelModalOpen(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-md bg-card border border-border shadow-2xl rounded-md overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-border/50 bg-card">
+                <h3 className="text-lg font-bold text-primary">Log Fuel</h3>
+                <button onClick={() => setIsFuelModalOpen(false)} className="p-2 text-muted hover:text-primary transition-colors bg-secondary/30 rounded-md border border-border"><X size={16} /></button>
+              </div>
+              <div className="p-6">
+                <form id="fuel-form" onSubmit={handleLogFuel} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Vehicle</label>
+                    <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm appearance-none cursor-pointer" value={fVehicle} onChange={e => setFVehicle(e.target.value)} required>
+                      <option value="">Select Vehicle...</option>
+                      {vehicles.map(v => <option key={v.regNo} value={v.regNo}>{v.regNo} ({v.name})</option>)}
                     </select>
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Liters</label>
+                    <input type="number" step="0.1" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={fLiters} onChange={e => setFLiters(e.target.value)} required />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Total Cost (₹)</label>
+                    <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={fCost} onChange={e => setFCost(e.target.value)} required />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Date</label>
+                    <input type="date" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={fDate} onChange={e => setFDate(e.target.value)} required />
+                  </div>
+                </form>
+              </div>
+              <div className="p-6 border-t border-border/50 bg-card flex justify-end gap-3">
+                <button type="button" onClick={() => setIsFuelModalOpen(false)} className="px-6 py-2 bg-secondary/10 hover:bg-secondary/20 text-primary rounded-md text-sm font-semibold transition-colors">Cancel</button>
+                <button type="submit" form="fuel-form" className="px-8 py-2 bg-primary text-secondary rounded-md text-sm font-semibold transition-colors">Save Fuel Log</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-                  <div className="form-group">
-                    <label className="form-label">EXPENSE TYPE</label>
-                    <select
-                      className="form-control select-control"
-                      value={expType}
-                      onChange={(e) => setExpType(e.target.value)}
-                      required
-                    >
+      {/* Expense Modal */}
+      <AnimatePresence>
+        {isExpenseModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-void/80 backdrop-blur-sm" onClick={() => setIsExpenseModalOpen(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-md bg-card border border-border shadow-2xl rounded-md overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-border/50 bg-card">
+                <h3 className="text-lg font-bold text-primary">Add Expense</h3>
+                <button onClick={() => setIsExpenseModalOpen(false)} className="p-2 text-muted hover:text-primary transition-colors bg-secondary/30 rounded-md border border-border"><X size={16} /></button>
+              </div>
+              <div className="p-6">
+                <form id="expense-form" onSubmit={handleAddExpense} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Vehicle</label>
+                    <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm appearance-none cursor-pointer" value={eVehicle} onChange={e => setEVehicle(e.target.value)} required>
+                      <option value="">Select Vehicle...</option>
+                      {vehicles.map(v => <option key={v.regNo} value={v.regNo}>{v.regNo} ({v.name})</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Expense Type</label>
+                    <select className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm appearance-none cursor-pointer" value={eType} onChange={e => setEType(e.target.value)} required>
                       <option value="Tolls">Tolls</option>
+                      <option value="Fines">Fines / Challans</option>
                       <option value="Parking">Parking</option>
-                      <option value="Repairs">Extra Repairs</option>
-                      <option value="Insurance">Insurance</option>
                       <option value="Other">Other</option>
                     </select>
                   </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">AMOUNT (INR)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={expAmount}
-                      onChange={(e) => setExpAmount(e.target.value)}
-                      placeholder="e.g. 800"
-                      min="1"
-                      required
-                    />
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Amount (₹)</label>
+                    <input type="number" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={eAmount} onChange={e => setEAmount(e.target.value)} required />
                   </div>
-
-                  <div className="form-group">
-                    <label className="form-label">DATE</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={expDate}
-                      onChange={(e) => setExpDate(e.target.value)}
-                      required
-                    />
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Description</label>
+                    <input type="text" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={eDesc} onChange={e => setEDesc(e.target.value)} required />
                   </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">DESCRIPTION</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={expDesc}
-                    onChange={(e) => setExpDesc(e.target.value)}
-                    placeholder="e.g. Tolls for Express Highway crossing"
-                    required
-                  />
-                </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Date</label>
+                    <input type="date" className="w-full px-4 py-2 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm" value={eDate} onChange={e => setEDate(e.target.value)} required />
+                  </div>
+                </form>
               </div>
-              <div className="modal-footer">
-                <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="btn btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Add Expense
-                </button>
+              <div className="p-6 border-t border-border/50 bg-card flex justify-end gap-3">
+                <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="px-6 py-2 bg-secondary/10 hover:bg-secondary/20 text-primary rounded-md text-sm font-semibold transition-colors">Cancel</button>
+                <button type="submit" form="expense-form" className="px-8 py-2 bg-primary text-secondary rounded-md text-sm font-semibold transition-colors">Save Expense</button>
               </div>
-            </form>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

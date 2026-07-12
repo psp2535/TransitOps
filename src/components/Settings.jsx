@@ -1,216 +1,125 @@
-import React, { useState } from 'react';
-import { Database, ShieldAlert, Plus, ShieldCheck, RefreshCw } from 'lucide-react';
+﻿import React, { useState } from 'react';
+import { Check } from 'lucide-react';
 
-export default function Settings({ users, setUsers, onResetData, currentUser }) {
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserRole, setNewUserRole] = useState('Dispatcher');
-  const [newUserPassword, setNewUserPassword] = useState('password123');
-  
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+export default function Settings({ currentUser }) {
+  const initials = currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'RK';
+  const userName = currentUser?.name || 'Raven K.';
+  const userRole = currentUser?.role || 'Dispatcher';
 
-  const isManager = currentUser?.role === 'Fleet Manager';
+  const [depotName, setDepotName] = useState('Gandhinagar Depot GJ4');
+  const [currency, setCurrency] = useState('INR (Rs)');
+  const [distanceUnit, setDistanceUnit] = useState('Kilometers');
 
-  const handleCreateUser = (e) => {
-    e.preventDefault();
-    setSuccessMsg('');
-    setErrorMsg('');
-
-    if (!isManager) {
-      setErrorMsg('Only Fleet Managers are authorized to add new platform users.');
-      return;
-    }
-
-    const emailExists = users.some(u => u.email.toLowerCase() === newUserEmail.trim().toLowerCase());
-    if (emailExists) {
-      setErrorMsg(`User with email "${newUserEmail}" already exists.`);
-      return;
-    }
-
-    const newUser = {
-      name: newUserName.trim(),
-      email: newUserEmail.trim(),
-      password: newUserPassword,
-      role: newUserRole
-    };
-
-    setUsers([...users, newUser]);
-    setSuccessMsg(`User "${newUserName}" successfully added with role "${newUserRole}".`);
-
-    // Reset Form
-    setNewUserName('');
-    setNewUserEmail('');
-    setNewUserRole('Dispatcher');
-  };
+  const rbacData = [
+    { role: 'Fleet Manager', fleet: '✓', drivers: '✓', trips: '-', fuel: '-', analytics: '✓' },
+    { role: 'Dispatcher', fleet: 'View', drivers: '-', trips: '✓', fuel: '-', analytics: '-' },
+    { role: 'Safety Officer', fleet: '-', drivers: '✓', trips: 'View', fuel: '-', analytics: '-' },
+    { role: 'Financial Analyst', fleet: 'View', drivers: '-', trips: '-', fuel: '✓', analytics: '✓' }
+  ];
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Settings & RBAC</h1>
-          <p className="page-subtitle">Configure system credentials, access controls, and restore seed logs</p>
+    <div className="w-full h-full flex flex-col bg-primary text-primary overflow-hidden font-sans">
+      
+      {/* Top Bar */}
+      <div className="flex items-center justify-between px-8 py-3 border-b border-border/50 bg-card">
+        <div className="relative w-80">
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            className="w-full px-4 py-1.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border transition-colors placeholder-muted text-primary shadow-sm"
+          />
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-secondary">{userName}</span>
+          <div className="flex items-center gap-2 pl-3 pr-1 py-1 border border-border/80 rounded-full shadow-sm bg-card">
+            <span className="text-xs font-semibold text-accent">{userRole}</span>
+            <div className="w-6 h-6 rounded-full bg-accent text-white flex items-center justify-center text-[10px] font-bold">
+              {initials}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="split-layout">
-        {/* Left: RBAC Matrix */}
-        <div className="card">
-          <h3 className="card-section-title">RBAC ROLE PERMISSIONS MATRIX</h3>
+      <div className="flex-1 overflow-y-auto p-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-16 max-w-7xl">
           
-          <div className="table-responsive">
-            <table className="table" style={{ fontSize: '0.825rem' }}>
-              <thead>
-                <tr>
-                  <th>ROLE</th>
-                  <th>VEHICLE REGISTRY</th>
-                  <th>TRIP DISPATCHER</th>
-                  <th>DRIVERS & SAFETY</th>
-                  <th>FUEL & COSTS</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ fontWeight: 700 }}>Fleet Manager</td>
-                  <td><span className="badge badge-completed">Full CRUD</span></td>
-                  <td><span className="badge badge-completed">Full CRUD</span></td>
-                  <td><span className="badge badge-completed">Full CRUD</span></td>
-                  <td><span className="badge badge-completed">Full CRUD</span></td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: 700 }}>Dispatcher</td>
-                  <td><span className="badge badge-draft">Read Only</span></td>
-                  <td><span className="badge badge-completed">Full CRUD</span></td>
-                  <td><span className="badge badge-draft">Read Only</span></td>
-                  <td><span className="badge badge-draft">Read Only</span></td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: 700 }}>Safety Officer</td>
-                  <td><span className="badge badge-draft">Read Only</span></td>
-                  <td><span className="badge badge-draft">Read Only</span></td>
-                  <td><span className="badge badge-completed">Full CRUD</span></td>
-                  <td><span className="badge badge-draft">Read Only</span></td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: 700 }}>Financial Analyst</td>
-                  <td><span className="badge badge-draft">Read Only</span></td>
-                  <td><span className="badge badge-draft">Read Only</span></td>
-                  <td><span className="badge badge-draft">Read Only</span></td>
-                  <td><span className="badge badge-completed">Full CRUD</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Developer Controls: Seed Data Reset */}
-          <div className="developer-controls-panel">
-            <h4 className="developer-panel-title">DEVELOPER & DEMO CONTROLS</h4>
-            <p className="developer-panel-desc">
-              Restore the mock database to its default high-fidelity records. This will reset all local changes in vehicles, trips, maintenance logs, and fuel expenses.
-            </p>
-            <button 
-              type="button" 
-              onClick={onResetData} 
-              className="btn btn-primary"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', display: 'flex', gap: '0.5rem', alignItems: 'center' }}
-            >
-              <RefreshCw size={16} />
-              <span>Seed Demo Data</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Right: Create User Form */}
-        <div className="card">
-          <h3 className="card-section-title">CREATE PLATFORM USER</h3>
-          
-          {!isManager && (
-            <div className="role-read-only-badge" style={{ width: '100%', marginBottom: '1.25rem', justifyContent: 'center' }}>
-              <ShieldAlert size={14} />
-              <span>User Creation Restricted (Requires Fleet Manager)</span>
-            </div>
-          )}
-
-          <form onSubmit={handleCreateUser}>
-            {successMsg && (
-              <div className="validation-alert" style={{ backgroundColor: 'rgba(34, 197, 94, 0.08)', borderColor: 'rgba(34, 197, 94, 0.3)', color: '#16a34a', marginBottom: '1.25rem' }}>
-                <ShieldCheck size={16} />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
-            {errorMsg && (
-              <div className="validation-alert" style={{ marginBottom: '1.25rem' }}>
-                <ShieldAlert size={16} />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            <div className="form-group">
-              <label className="form-label">FULL NAME</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="e.g. Sarah Connor"
-                value={newUserName}
-                onChange={(e) => setNewUserName(e.target.value)}
-                required
-                disabled={!isManager}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">EMAIL ADDRESS</label>
-              <input
-                type="email"
-                className="form-control"
-                placeholder="e.g. sarahc@transitops.in"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                required
-                disabled={!isManager}
-              />
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">ROLE ASSIGNMENT</label>
-                <select
-                  className="form-control select-control"
-                  value={newUserRole}
-                  onChange={(e) => setNewUserRole(e.target.value)}
-                  disabled={!isManager}
-                >
-                  <option value="Fleet Manager">Fleet Manager</option>
-                  <option value="Dispatcher">Dispatcher</option>
-                  <option value="Safety Officer">Safety Officer</option>
-                  <option value="Financial Analyst">Financial Analyst</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">TEMPORARY PASSWORD</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  disabled={!isManager}
+          {/* Left Column: General */}
+          <div className="flex flex-col gap-6">
+            <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-2">General</h3>
+            
+            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Depot Name</label>
+                <input 
+                  type="text" 
+                  value={depotName}
+                  onChange={(e) => setDepotName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
                 />
               </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Currency</label>
+                <input 
+                  type="text" 
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-widest">Distance Unit</label>
+                <input 
+                  type="text" 
+                  value={distanceUnit}
+                  onChange={(e) => setDistanceUnit(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-card border border-border/80 rounded-md text-sm outline-none focus:border-border text-primary shadow-sm"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button type="submit" className="px-8 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
+                  Save changes
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Column: Role-Based Access (RBAC) */}
+          <div className="flex flex-col">
+            <h3 className="text-xs font-bold text-muted uppercase tracking-widest mb-8 shrink-0">Role-Based Access (RBAC)</h3>
+            
+            <div className="w-full">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Role</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Fleet</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Drivers</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Trips</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Fuel/Exp.</th>
+                    <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-widest border-b border-border/50">Analytics</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {rbacData.map((row, index) => (
+                    <tr key={index} className="hover:bg-secondary/5 transition-colors">
+                      <td className="py-4 px-4 text-sm font-semibold text-primary">{row.role}</td>
+                      <td className="py-4 px-4 text-sm text-secondary">{row.fleet === '✓' ? <Check size={16} /> : row.fleet}</td>
+                      <td className="py-4 px-4 text-sm text-secondary">{row.drivers === '✓' ? <Check size={16} /> : row.drivers}</td>
+                      <td className="py-4 px-4 text-sm text-secondary">{row.trips === '✓' ? <Check size={16} /> : row.trips}</td>
+                      <td className="py-4 px-4 text-sm text-secondary">{row.fuel === '✓' ? <Check size={16} /> : row.fuel}</td>
+                      <td className="py-4 px-4 text-sm text-secondary">{row.analytics === '✓' ? <Check size={16} /> : row.analytics}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            <button 
-              type="submit" 
-              className="btn btn-primary btn-block"
-              disabled={!isManager}
-            >
-              <Plus size={16} />
-              <span>Create User Account</span>
-            </button>
-          </form>
+          </div>
+
         </div>
       </div>
     </div>
